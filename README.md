@@ -1,16 +1,166 @@
-# task_manager_app
+# タスク管理アプリ
 
-A new Flutter project.
+学生生活向けタスク管理アプリ（Flutter / Android）
 
-## Getting Started
+![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
 
-This project is a starting point for a Flutter application.
+## 📋 プロジェクト概要
 
-A few resources to get you started if this is your first Flutter project:
+IT専門学校の卒業制作として開発した、学生生活に最適化されたタスク管理モバイルアプリケーションです。
+複数のプログラミング課題とアルバイトを両立する学生が、シンプルかつ効率的にタスクを管理できるよう設計されています。
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### 開発背景
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+既存のタスク管理アプリでは、以下の課題がありました：
+- 操作が複雑で学習コストが高い
+- シンプルすぎて期限管理が不十分
+- 学生の使用シーンに最適化されていない
+
+これらの課題を解決するため、「学生生活の課題管理に最適化された、シンプルで必要十分な機能を備えたモバイルアプリ」を開発しました。
+
+## ✨ 主な機能
+
+### タスク管理
+- **タスクの追加**: タイトル、締切日時、優先度を設定
+- **タスクの編集・削除**: 既存タスクの修正・削除が可能
+- **タスクのステータス管理**: 未対応 → 進行中 → 完了の3段階で管理
+- **タスクの移動機能**: ドラッグ＆ドロップ不要の簡単操作
+
+### 視覚的な管理
+- **優先度表示**: 高（赤）、中（オレンジ）、低（緑）の色分け
+- **締切の色分け**: 
+  - 🔴 期限切れ（赤）
+  - 🟠 本日締切（オレンジ）
+  - 🟢 余裕あり（緑）
+- **カンバンボード形式**: 一目で進捗状況を把握
+
+### データ管理
+- **ローカル保存**: SharedPreferencesによる永続化
+- **オフライン動作**: ネット接続不要で使用可能
+- **自動ソート**: 締切順に自動整列
+
+## 🛠️ 技術スタック
+
+- **開発言語**: Dart
+- **フレームワーク**: Flutter
+- **データ管理**: SharedPreferences（JSON形式）
+- **対象プラットフォーム**: Android
+- **開発環境**: Visual Studio Code
+
+### 主要パッケージ
+
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.0.0
+```
+
+## 🚀 セットアップ方法
+
+### 必要な環境
+
+- Flutter SDK 3.0以上
+- Dart 2.17以上
+- Android Studio / VS Code
+- Android端末 または エミュレータ
+
+### インストール手順
+
+1. リポジトリをクローン
+
+```bash
+git clone https://github.com/high6430/task-manager-app.git
+cd task-manager-app
+```
+
+2. 依存関係をインストール
+
+```bash
+flutter pub get
+```
+
+3. アプリを起動
+
+```bash
+flutter run
+```
+
+## 📱 使い方
+
+### タスクの追加
+
+1. 右下の「+」ボタンをタップ
+2. タイトル、締切日時、優先度を入力
+3. 「追加」ボタンをタップ
+
+### タスクの移動
+
+- 「進行中へ」ボタン: 未対応 → 進行中
+- 「完了へ」ボタン: 進行中 → 完了
+- 「未対応へ」ボタン: 進行中 → 未対応（戻す）
+
+### タスクの削除
+
+各タスクカードの「削除」ボタンをタップ
+
+## 🎯 開発目標
+
+### 達成済み
+- ✅ シンプルで操作しやすいUIの構築
+- ✅ タスクのCRUD機能実装
+- ✅ 優先度・締切順のソート機能
+- ✅ タスクのステータス管理（3段階）
+- ✅ ローカルデータの永続化
+
+### 今後の予定
+- 🔲 通知機能の実装（flutter_local_notifications）
+- 🔲 タスク編集機能の追加
+- 🔲 タグ機能の実装
+- 🔲 カレンダービューの追加
+- 🔲 統計・分析機能（完了率など）
+- 🔲 データのエクスポート/インポート機能
+
+## 📂 プロジェクト構成
+
+```
+task_manager_app/
+├── lib/
+│   └── main.dart          # メインアプリケーション
+├── test/
+│   └── widget_test.dart   # テストコード
+├── android/               # Android設定
+├── pubspec.yaml           # 依存関係定義
+└── README.md              # このファイル
+```
+
+## 🎓 学習成果
+
+本プロジェクトを通じて習得したスキル：
+- Flutterのウィジェット構造と状態管理（StatefulWidget）
+- ローカルデータ管理（SharedPreferences）
+- モバイル向けUI/UX設計
+- Gitを用いたバージョン管理
+- 企画から実装、テストまでの一連の開発プロセス
+
+## 👤 対象ユーザー（ペルソナ）
+
+- **名前**: 鈴木 拓也（仮名）
+- **背景**: IT専門学校2年生。複数の課題・チームプロジェクト・アルバイトを両立
+- **課題**: 課題提出やアルバイトシフトが混在し、タスクの優先度や締切が把握しづらい
+- **ニーズ**: スマホで簡単にタスクを追加・確認・完了でき、締切を忘れないようにしたい
+
+## 📄 ライセンス
+
+このプロジェクトはMITライセンスの下で公開されています。
+
+## 📞 お問い合わせ
+
+質問や提案がある場合は、GitHubのIssuesからお願いします。
+
+---
+
+**開発者**: high6430  
+**開発期間**: 2024年 - 2025年  
+**用途**: 卒業制作
