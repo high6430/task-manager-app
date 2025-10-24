@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'models/task.dart';
 import 'services/task_service.dart';
+import 'widgets/task_card.dart';
 void main() {
   runApp(TaskManagerApp());
 }
@@ -345,29 +346,78 @@ Future<void> _saveTasks() async {
     );
   }
 
-  Widget buildTaskColumn(String title, List<Task> tasks) {
-    tasks.sort((a, b) => a.deadline.compareTo(b.deadline));
+Widget buildTaskColumn(String title, List<Task> tasks) {
+  tasks.sort((a, b) => a.deadline.compareTo(b.deadline));
 
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            title,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+  return Expanded(
+    child: Column(
+      children: [
+        Text(
+          title,
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: tasks.length,
+            itemBuilder: (context, index) {
+              final task = tasks[index];
+              return TaskCard(
+                task: task,
+                currentColumn: title,
+                onDelete: () {
+                  setState(() {
+                    if (title == "未対応") {
+                      todoTasks.remove(task);
+                    } else if (title == "進行中") {
+                      doingTasks.remove(task);
+                    } else if (title == "完了") {
+                      doneTasks.remove(task);
+                    }
+                    _saveTasks();
+                  });
+                },
+                onMoveToTodo: title == "進行中"
+                    ? () {
+                        setState(() {
+                          doingTasks.remove(task);
+                          todoTasks.add(task);
+                          todoTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
+                          _saveTasks();
+                        });
+                      }
+                    : null,
+                onMoveToDoing: (title == "未対応" || title == "完了")
+                    ? () {
+                        setState(() {
+                          if (title == "未対応") {
+                            todoTasks.remove(task);
+                          } else {
+                            doneTasks.remove(task);
+                          }
+                          doingTasks.add(task);
+                          doingTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
+                          _saveTasks();
+                        });
+                      }
+                    : null,
+                onMoveToDone: title == "進行中"
+                    ? () {
+                        setState(() {
+                          doingTasks.remove(task);
+                          doneTasks.add(task);
+                          doneTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
+                          _saveTasks();
+                        });
+                      }
+                    : null,
+              );
+            },
           ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                final task = tasks[index];
-                return buildTaskCard(task, title);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
