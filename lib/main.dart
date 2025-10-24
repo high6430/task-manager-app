@@ -1,35 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-
+import 'models/task.dart';
+import 'services/task_service.dart';
 void main() {
   runApp(TaskManagerApp());
-}
-
-enum Priority { high, middle, low }
-
-class Task {
-  final String title;
-  final DateTime deadline;
-  final Priority priority;
-
-  Task(this.title, this.deadline, {this.priority = Priority.middle});
-
-  Map<String, dynamic> toJson() {
-    return {
-      'title': title,
-      'deadline': deadline.toIso8601String(),
-      'priority': priority.index,
-    };
-  }
-
-  factory Task.fromJson(Map<String, dynamic> json) {
-    return Task(
-      json['title'],
-      DateTime.parse(json['deadline']),
-      priority: Priority.values[json['priority']],
-    );
-  }
 }
 
 class TaskManagerApp extends StatelessWidget {
@@ -60,31 +35,21 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> {
   }
 
   Future<void> _loadTasks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final todoString = prefs.getString('todoTasks');
-    final doingString = prefs.getString('doingTasks');
-    final doneString = prefs.getString('doneTasks');
+  final tasks = await TaskService.loadTasks();
+  setState(() {
+    todoTasks = tasks['todo']!;
+    doingTasks = tasks['doing']!;
+    doneTasks = tasks['done']!;
+  });
+}
 
-    setState(() {
-      todoTasks = todoString != null
-          ? List<Task>.from(json.decode(todoString).map((x) => Task.fromJson(x)))
-          : [];
-      doingTasks = doingString != null
-          ? List<Task>.from(json.decode(doingString).map((x) => Task.fromJson(x)))
-          : [];
-      doneTasks = doneString != null
-          ? List<Task>.from(json.decode(doneString).map((x) => Task.fromJson(x)))
-          : [];
-    });
-  }
-
-  Future<void> _saveTasks() async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setString('todoTasks', json.encode(todoTasks.map((x) => x.toJson()).toList()));
-    prefs.setString('doingTasks', json.encode(doingTasks.map((x) => x.toJson()).toList()));
-    prefs.setString('doneTasks', json.encode(doneTasks.map((x) => x.toJson()).toList()));
-  }
-
+Future<void> _saveTasks() async {
+  await TaskService.saveTasks(
+    todoTasks: todoTasks,
+    doingTasks: doingTasks,
+    doneTasks: doneTasks,
+  );
+}
   void _addTaskDialog() {
     final titleController = TextEditingController();
     DateTime? selectedDate;
