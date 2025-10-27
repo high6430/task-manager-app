@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'models/task.dart';
 import 'services/task_service.dart';
 import 'widgets/task_card.dart';
+import 'widgets/add_task_dialog.dart';
 void main() {
   runApp(TaskManagerApp());
 }
@@ -52,141 +53,19 @@ Future<void> _saveTasks() async {
   );
 }
   void _addTaskDialog() {
-    final titleController = TextEditingController();
-    DateTime? selectedDate;
-    TimeOfDay? selectedTime;
-    Priority? selectedPriority;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            String getTimeText() {
-              if (selectedTime != null) {
-                return "${selectedTime!.hour.toString().padLeft(2,'0')}:${selectedTime!.minute.toString().padLeft(2,'0')}";
-              } else {
-                return "00:00";
-              }
-            }
-
-            return AlertDialog(
-              title: Text("新しいタスクを追加"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleController,
-                    decoration: InputDecoration(labelText: "タイトル"),
-                  ),
-                  SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          selectedDate == null
-                              ? "締め切り日: 未選択"
-                              : "締め切り日: ${selectedDate!.year}/${selectedDate!.month}/${selectedDate!.day} ${getTimeText()}",
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      Column(
-                        children: [
-                          ElevatedButton(
-                            child: Text("日付選択"),
-                            onPressed: () async {
-                              final DateTime? picked = await showDatePicker(
-                                context: context,
-                                initialDate: DateTime.now(),
-                                firstDate: DateTime(2020),
-                                lastDate: DateTime(2100),
-                              );
-                              if (picked != null) {
-                                setStateDialog(() {
-                                  selectedDate = picked;
-                                });
-                              }
-                            },
-                          ),
-                          ElevatedButton(
-                            child: Text("時間選択"),
-                            onPressed: () async {
-                              final TimeOfDay? pickedTime = await showTimePicker(
-                                context: context,
-                                initialTime: TimeOfDay.now(),
-                              );
-                              if (pickedTime != null) {
-                                setStateDialog(() {
-                                  selectedTime = pickedTime;
-                                });
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Text("優先度: ", style: TextStyle(fontSize: 16)),
-                      DropdownButton<Priority>(
-                        value: selectedPriority ?? Priority.middle,
-                        items: Priority.values
-                            .map((p) => DropdownMenuItem(
-                                  value: p,
-                                  child: Text(
-                                    p == Priority.high
-                                        ? "高"
-                                        : p == Priority.middle
-                                            ? "中"
-                                            : "下",
-                                  ),
-                                ))
-                            .toList(),
-                        onChanged: (p) {
-                          setStateDialog(() {
-                            selectedPriority = p;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  child: Text("キャンセル"),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                ElevatedButton(
-                  child: Text("追加"),
-                  onPressed: () {
-                    if (titleController.text.isNotEmpty && selectedDate != null) {
-                      final deadline = DateTime(
-                        selectedDate!.year,
-                        selectedDate!.month,
-                        selectedDate!.day,
-                        selectedTime?.hour ?? 0,
-                        selectedTime?.minute ?? 0,
-                      );
-                      setState(() {
-                        todoTasks.add(Task(
-                            titleController.text, deadline,
-                            priority: selectedPriority ?? Priority.middle));
-                        todoTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
-                        _saveTasks();
-                      });
-                      Navigator.pop(context);
-                    }
-                  },
-                ),
-              ],
-            );
-          },
-        );
+  showDialog(
+    context: context,
+    builder: (context) => AddTaskDialog(
+      onTaskAdded: (task) {
+        setState(() {
+          todoTasks.add(task);
+          todoTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
+          _saveTasks();
+        });
       },
-    );
-  }
+    ),
+  );
+}
 
   Color _getDeadlineColor(DateTime deadline) {
     final now = DateTime.now();
