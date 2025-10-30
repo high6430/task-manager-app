@@ -166,6 +166,20 @@ class TaskCard extends StatelessWidget {
                 Icon(Icons.circle, color: _priorityColor(task.priority), size: 14),
               ],
             ),
+            if (task.description.isNotEmpty) ...[
+              SizedBox(height: 8),
+              Text(
+                "詳細:",
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
+              ),
+              SizedBox(height: 2),
+              Text(
+                task.description,
+                style: TextStyle(fontSize: 12, color: textColor),
+                overflow: TextOverflow.visible,
+                softWrap: true,
+              ),
+            ],
             SizedBox(height: 4),
             Text(
               "締め切り: ${task.deadline.year}/${task.deadline.month}/${task.deadline.day} "

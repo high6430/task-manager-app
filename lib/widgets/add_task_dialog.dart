@@ -12,6 +12,7 @@ class AddTaskDialog extends StatefulWidget {
 
 class _AddTaskDialogState extends State<AddTaskDialog> {
   final titleController = TextEditingController();
+  final descriptionController = TextEditingController();
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
   Priority selectedPriority = Priority.middle;
@@ -19,6 +20,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   @override
   void dispose() {
     titleController.dispose();
+    descriptionController.dispose();
     super.dispose();
   }
 
@@ -43,6 +45,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         titleController.text,
         deadline,
         priority: selectedPriority,
+        description: descriptionController.text,
       );
       widget.onTaskAdded(task);
       Navigator.pop(context);
@@ -53,88 +56,100 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text("新しいタスクを追加"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: titleController,
-            decoration: InputDecoration(labelText: "タイトル"),
-          ),
-          SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  selectedDate == null
-                      ? "締め切り日: 未選択"
-                      : "締め切り日: ${selectedDate!.year}/${selectedDate!.month}/${selectedDate!.day} ${getTimeText()}",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: InputDecoration(labelText: "タイトル"),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: descriptionController,
+              decoration: InputDecoration(
+                labelText: "詳細（任意）",
+                hintText: "タスクの詳細を入力",
+              ),
+              maxLines: 3,
+              minLines: 1,
+            ),
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    selectedDate == null
+                        ? "締め切り日: 未選択"
+                        : "締め切り日: ${selectedDate!.year}/${selectedDate!.month}/${selectedDate!.day} ${getTimeText()}",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
-              Column(
-                children: [
-                  ElevatedButton(
-                    child: Text("日付選択"),
-                    onPressed: () async {
-                      final DateTime? picked = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          selectedDate = picked;
-                        });
-                      }
-                    },
-                  ),
-                  ElevatedButton(
-                    child: Text("時間選択"),
-                    onPressed: () async {
-                      final TimeOfDay? pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-                      if (pickedTime != null) {
-                        setState(() {
-                          selectedTime = pickedTime;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              Text("優先度: ", style: TextStyle(fontSize: 16)),
-              DropdownButton<Priority>(
-                value: selectedPriority,
-                items: Priority.values
-                    .map((p) => DropdownMenuItem(
-                          value: p,
-                          child: Text(
-                            p == Priority.high
-                                ? "高"
-                                : p == Priority.middle
-                                    ? "中"
-                                    : "低",
-                          ),
-                        ))
-                    .toList(),
-                onChanged: (p) {
-                  if (p != null) {
-                    setState(() {
-                      selectedPriority = p;
-                    });
-                  }
-                },
-              ),
-            ],
-          ),
-        ],
+                Column(
+                  children: [
+                    ElevatedButton(
+                      child: Text("日付選択"),
+                      onPressed: () async {
+                        final DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            selectedDate = picked;
+                          });
+                        }
+                      },
+                    ),
+                    ElevatedButton(
+                      child: Text("時間選択"),
+                      onPressed: () async {
+                        final TimeOfDay? pickedTime = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+                        if (pickedTime != null) {
+                          setState(() {
+                            selectedTime = pickedTime;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Text("優先度: ", style: TextStyle(fontSize: 16)),
+                DropdownButton<Priority>(
+                  value: selectedPriority,
+                  items: Priority.values
+                      .map((p) => DropdownMenuItem(
+                            value: p,
+                            child: Text(
+                              p == Priority.high
+                                  ? "高"
+                                  : p == Priority.middle
+                                      ? "中"
+                                      : "低",
+                            ),
+                          ))
+                      .toList(),
+                  onChanged: (p) {
+                    if (p != null) {
+                      setState(() {
+                        selectedPriority = p;
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(

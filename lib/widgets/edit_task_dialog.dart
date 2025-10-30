@@ -17,6 +17,7 @@ class EditTaskDialog extends StatefulWidget {
 
 class _EditTaskDialogState extends State<EditTaskDialog> {
   late TextEditingController titleController;
+  late TextEditingController descriptionController;
   late DateTime selectedDate;
   late TimeOfDay selectedTime;
   late Priority selectedPriority;
@@ -25,6 +26,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
   void initState() {
     super.initState();
     titleController = TextEditingController(text: widget.task.title);
+    descriptionController = TextEditingController(text: widget.task.description);
     selectedDate = DateTime(
       widget.task.deadline.year,
       widget.task.deadline.month,
@@ -40,6 +42,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
   @override
   void dispose() {
     titleController.dispose();
+    descriptionController.dispose();
     super.dispose();
   }
 
@@ -60,6 +63,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
         titleController.text,
         deadline,
         priority: selectedPriority,
+        description: descriptionController.text,
       );
       widget.onTaskUpdated(updatedTask);
       Navigator.pop(context);
@@ -77,6 +81,16 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
             TextField(
               controller: titleController,
               decoration: InputDecoration(labelText: "タイトル"),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: descriptionController,
+              decoration: InputDecoration(
+                labelText: "詳細（任意）",
+                hintText: "タスクの詳細を入力",
+              ),
+              maxLines: 3,
+              minLines: 1,
             ),
             SizedBox(height: 12),
             Row(
