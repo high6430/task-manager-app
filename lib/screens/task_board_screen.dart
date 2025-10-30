@@ -9,15 +9,24 @@ class TaskBoardScreen extends StatefulWidget {
   _TaskBoardScreenState createState() => _TaskBoardScreenState();
 }
 
-class _TaskBoardScreenState extends State<TaskBoardScreen> {
+class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProviderStateMixin {
   List<Task> todoTasks = [];
   List<Task> doingTasks = [];
   List<Task> doneTasks = [];
+  
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _loadTasks();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTasks() async {
@@ -52,88 +61,97 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> {
     );
   }
 
-  Widget buildTaskColumn(String title, List<Task> tasks) {
+  Widget _buildTaskList(List<Task> tasks, String columnName) {
     tasks.sort((a, b) => a.deadline.compareTo(b.deadline));
 
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            title,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                final task = tasks[index];
-                return TaskCard(
-                  task: task,
-                  currentColumn: title,
-                  onDelete: () {
-                    setState(() {
-                      if (title == "未対応") {
-                        todoTasks.remove(task);
-                      } else if (title == "進行中") {
-                        doingTasks.remove(task);
-                      } else if (title == "完了") {
-                        doneTasks.remove(task);
-                      }
-                      _saveTasks();
-                    });
-                  },
-                  onMoveToTodo: title == "進行中"
-                      ? () {
-                          setState(() {
-                            doingTasks.remove(task);
-                            todoTasks.add(task);
-                            todoTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
-                            _saveTasks();
-                          });
-                        }
-                      : null,
-                  onMoveToDoing: (title == "未対応" || title == "完了")
-                      ? () {
-                          setState(() {
-                            if (title == "未対応") {
-                              todoTasks.remove(task);
-                            } else {
-                              doneTasks.remove(task);
-                            }
-                            doingTasks.add(task);
-                            doingTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
-                            _saveTasks();
-                          });
-                        }
-                      : null,
-                  onMoveToDone: title == "進行中"
-                      ? () {
-                          setState(() {
-                            doingTasks.remove(task);
-                            doneTasks.add(task);
-                            doneTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
-                            _saveTasks();
-                          });
-                        }
-                      : null,
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+    if (tasks.isEmpty) {
+      return Center(
+        child: Text(
+          'タスクがありません',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(8),
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        final task = tasks[index];
+        return TaskCard(
+          task: task,
+          currentColumn: columnName,
+          onDelete: () {
+            setState(() {
+              if (columnName == "未対応") {
+                todoTasks.remove(task);
+              } else if (columnName == "進行中") {
+                doingTasks.remove(task);
+              } else if (columnName == "完了") {
+                doneTasks.remove(task);
+              }
+              _saveTasks();
+            });
+          },
+          onMoveToTodo: columnName == "進行中"
+              ? () {
+                  setState(() {
+                    doingTasks.remove(task);
+                    todoTasks.add(task);
+                    todoTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
+                    _saveTasks();
+                  });
+                }
+              : null,
+          onMoveToDoing: (columnName == "未対応" || columnName == "完了")
+              ? () {
+                  setState(() {
+                    if (columnName == "未対応") {
+                      todoTasks.remove(task);
+                    } else {
+                      doneTasks.remove(task);
+                    }
+                    doingTasks.add(task);
+                    doingTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
+                    _saveTasks();
+                  });
+                }
+              : null,
+          onMoveToDone: columnName == "進行中"
+              ? () {
+                  setState(() {
+                    doingTasks.remove(task);
+                    doneTasks.add(task);
+                    doneTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
+                    _saveTasks();
+                  });
+                }
+              : null,
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("タスク管理")),
-      body: Row(
+      appBar: AppBar(
+        title: Text("タスク管理"),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(text: "未対応 (${todoTasks.length})"),
+            Tab(text: "進行中 (${doingTasks.length})"),
+            Tab(text: "完了 (${doneTasks.length})"),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          buildTaskColumn("未対応", todoTasks),
-          buildTaskColumn("進行中", doingTasks),
-          buildTaskColumn("完了", doneTasks),
+          _buildTaskList(todoTasks, "未対応"),
+          _buildTaskList(doingTasks, "進行中"),
+          _buildTaskList(doneTasks, "完了"),
         ],
       ),
       floatingActionButton: FloatingActionButton(
