@@ -5,6 +5,7 @@ class TaskCard extends StatelessWidget {
   final Task task;
   final String currentColumn;
   final VoidCallback onDelete;
+  final VoidCallback? onEdit;
   final VoidCallback? onMoveToTodo;
   final VoidCallback? onMoveToDoing;
   final VoidCallback? onMoveToDone;
@@ -14,6 +15,7 @@ class TaskCard extends StatelessWidget {
     required this.task,
     required this.currentColumn,
     required this.onDelete,
+    this.onEdit,
     this.onMoveToTodo,
     this.onMoveToDoing,
     this.onMoveToDone,
@@ -56,11 +58,12 @@ class TaskCard extends StatelessWidget {
     final cardColor = _getDeadlineColor(task.deadline);
     final textColor = _getTextColor(cardColor);
 
-    List<Widget> moveButtons = [];
+    List<Widget> actionButtons = [];
 
+    // 移動ボタン
     if (currentColumn == "未対応") {
       if (onMoveToDoing != null) {
-        moveButtons.add(
+        actionButtons.add(
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -73,7 +76,7 @@ class TaskCard extends StatelessWidget {
       }
     } else if (currentColumn == "進行中") {
       if (onMoveToTodo != null) {
-        moveButtons.add(
+        actionButtons.add(
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -85,7 +88,7 @@ class TaskCard extends StatelessWidget {
         );
       }
       if (onMoveToDone != null) {
-        moveButtons.add(
+        actionButtons.add(
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -98,7 +101,7 @@ class TaskCard extends StatelessWidget {
       }
     } else if (currentColumn == "完了") {
       if (onMoveToDoing != null) {
-        moveButtons.add(
+        actionButtons.add(
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -111,15 +114,34 @@ class TaskCard extends StatelessWidget {
       }
     }
 
-    final deleteButton = ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.grey.withOpacity(0.5),
-        foregroundColor: Colors.white,
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        minimumSize: Size(0, 40),
+    // 編集ボタン
+    if (onEdit != null) {
+      actionButtons.add(
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            minimumSize: Size(100, 40),
+          ),
+          child: Text("編集", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          onPressed: onEdit,
+        ),
+      );
+    }
+
+    // 削除ボタン（小さいまま）
+    actionButtons.add(
+      ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.grey.withOpacity(0.5),
+          foregroundColor: Colors.white,
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          minimumSize: Size(0, 40),
+        ),
+        child: Text("削除", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        onPressed: onDelete,
       ),
-      child: Text("削除", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-      onPressed: onDelete,
     );
 
     return Card(
@@ -154,11 +176,7 @@ class TaskCard extends StatelessWidget {
             Wrap(
               spacing: 4.0,
               runSpacing: 4.0,
-              alignment: WrapAlignment.spaceBetween,
-              children: [
-                ...moveButtons,
-                deleteButton,
-              ],
+              children: actionButtons,
             ),
           ],
         ),

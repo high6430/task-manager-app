@@ -3,6 +3,7 @@ import '../models/task.dart';
 import '../services/task_service.dart';
 import '../widgets/task_card.dart';
 import '../widgets/add_task_dialog.dart';
+import '../widgets/edit_task_dialog.dart';
 
 class TaskBoardScreen extends StatefulWidget {
   @override
@@ -98,6 +99,34 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
     );
   }
 
+  void _editTask(Task oldTask, String columnName) {
+    showDialog(
+      context: context,
+      builder: (context) => EditTaskDialog(
+        task: oldTask,
+        onTaskUpdated: (newTask) {
+          setState(() {
+            List<Task> targetList;
+            if (columnName == "未対応") {
+              targetList = todoTasks;
+            } else if (columnName == "進行中") {
+              targetList = doingTasks;
+            } else {
+              targetList = doneTasks;
+            }
+            
+            final index = targetList.indexOf(oldTask);
+            if (index != -1) {
+              targetList[index] = newTask;
+              targetList.sort((a, b) => a.deadline.compareTo(b.deadline));
+            }
+            _saveTasks();
+          });
+        },
+      ),
+    );
+  }
+
   Widget _buildTaskList(List<Task> tasks, String columnName) {
     tasks.sort((a, b) => a.deadline.compareTo(b.deadline));
 
@@ -120,6 +149,9 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
           currentColumn: columnName,
           onDelete: () {
             _showDeleteConfirmDialog(task, columnName);
+          },
+          onEdit: () {
+            _editTask(task, columnName);
           },
           onMoveToTodo: columnName == "進行中"
               ? () {
