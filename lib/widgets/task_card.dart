@@ -62,7 +62,11 @@ class TaskCard extends StatelessWidget {
       if (onMoveToDoing != null) {
         moveButtons.add(
           ElevatedButton(
-            child: Text("進行中へ"),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              minimumSize: Size(100, 40),
+            ),
+            child: Text("進行中へ", style: TextStyle(fontSize: 14)),
             onPressed: onMoveToDoing,
           ),
         );
@@ -71,7 +75,11 @@ class TaskCard extends StatelessWidget {
       if (onMoveToTodo != null) {
         moveButtons.add(
           ElevatedButton(
-            child: Text("未対応へ"),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              minimumSize: Size(100, 40),
+            ),
+            child: Text("未対応へ", style: TextStyle(fontSize: 14)),
             onPressed: onMoveToTodo,
           ),
         );
@@ -79,7 +87,11 @@ class TaskCard extends StatelessWidget {
       if (onMoveToDone != null) {
         moveButtons.add(
           ElevatedButton(
-            child: Text("完了へ"),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              minimumSize: Size(100, 40),
+            ),
+            child: Text("完了へ", style: TextStyle(fontSize: 14)),
             onPressed: onMoveToDone,
           ),
         );
@@ -88,7 +100,11 @@ class TaskCard extends StatelessWidget {
       if (onMoveToDoing != null) {
         moveButtons.add(
           ElevatedButton(
-            child: Text("進行中へ"),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              minimumSize: Size(100, 40),
+            ),
+            child: Text("進行中へ", style: TextStyle(fontSize: 14)),
             onPressed: onMoveToDoing,
           ),
         );
@@ -96,12 +112,13 @@ class TaskCard extends StatelessWidget {
     }
 
     final deleteButton = ElevatedButton(
-      child: Text("削除"),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.grey.withOpacity(0.5),
         foregroundColor: Colors.white,
-        textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        minimumSize: Size(0, 40),
       ),
+      child: Text("削除", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
       onPressed: onDelete,
     );
 
@@ -113,33 +130,33 @@ class TaskCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  task.title,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
+                Expanded(
+                  child: Text(
+                    task.title,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+                    overflow: TextOverflow.visible,
+                    softWrap: true,
+                  ),
                 ),
                 SizedBox(width: 8),
-                Icon(Icons.circle, color: _priorityColor(task.priority), size: 16),
+                Icon(Icons.circle, color: _priorityColor(task.priority), size: 14),
               ],
             ),
             SizedBox(height: 4),
             Text(
               "締め切り: ${task.deadline.year}/${task.deadline.month}/${task.deadline.day} "
               "${task.deadline.hour.toString().padLeft(2, '0')}:${task.deadline.minute.toString().padLeft(2, '0')}",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor),
             ),
             SizedBox(height: 8),
-            Row(
+            Wrap(
+              spacing: 4.0,
+              runSpacing: 4.0,
+              alignment: WrapAlignment.spaceBetween,
               children: [
-                Row(
-                  children: moveButtons
-                      .map((b) => Padding(
-                            padding: const EdgeInsets.only(right: 4.0),
-                            child: b,
-                          ))
-                      .toList(),
-                ),
-                Spacer(),
+                ...moveButtons,
                 deleteButton,
               ],
             ),
