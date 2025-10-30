@@ -61,6 +61,43 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
     );
   }
 
+  void _showDeleteConfirmDialog(Task task, String columnName) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text("確認"),
+        content: Text("このタスクを削除しますか？\n\n「${task.title}」"),
+        actions: [
+          TextButton(
+            child: Text("キャンセル"),
+            onPressed: () => Navigator.pop(context),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text("削除"),
+            onPressed: () {
+              setState(() {
+                if (columnName == "未対応") {
+                  todoTasks.remove(task);
+                } else if (columnName == "進行中") {
+                  doingTasks.remove(task);
+                } else if (columnName == "完了") {
+                  doneTasks.remove(task);
+                }
+                _saveTasks();
+              });
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTaskList(List<Task> tasks, String columnName) {
     tasks.sort((a, b) => a.deadline.compareTo(b.deadline));
 
@@ -82,16 +119,7 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
           task: task,
           currentColumn: columnName,
           onDelete: () {
-            setState(() {
-              if (columnName == "未対応") {
-                todoTasks.remove(task);
-              } else if (columnName == "進行中") {
-                doingTasks.remove(task);
-              } else if (columnName == "完了") {
-                doneTasks.remove(task);
-              }
-              _saveTasks();
-            });
+            _showDeleteConfirmDialog(task, columnName);
           },
           onMoveToTodo: columnName == "進行中"
               ? () {
