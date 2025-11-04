@@ -4,6 +4,7 @@ import '../services/task_service.dart';
 import '../widgets/task_card.dart';
 import '../widgets/add_task_dialog.dart';
 import '../widgets/edit_task_dialog.dart';
+import 'label_settings_screen.dart';
 
 class TaskBoardScreen extends StatefulWidget {
   @override
@@ -197,6 +198,18 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
     return Scaffold(
       appBar: AppBar(
         title: Text("タスク管理"),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.label),
+            tooltip: "ラベル管理",
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => LabelSettingsScreen()),
+              );
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: [
