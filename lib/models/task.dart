@@ -5,12 +5,14 @@ class Task {
   final DateTime deadline;
   final Priority priority;
   final String description;
+  final List<String> labelIds;
 
   Task(
     this.title,
     this.deadline, {
     this.priority = Priority.middle,
     this.description = '',
+    this.labelIds = const [],
   });
 
   Map<String, dynamic> toJson() {
@@ -19,6 +21,7 @@ class Task {
       'deadline': deadline.toIso8601String(),
       'priority': priority.index,
       'description': description,
+      'labelIds': labelIds,
     };
   }
 
@@ -28,6 +31,9 @@ class Task {
       DateTime.parse(json['deadline']),
       priority: Priority.values[json['priority']],
       description: json['description'] ?? '',
+      labelIds: json['labelIds'] != null 
+          ? List<String>.from(json['labelIds']) 
+          : [],
     );
   }
 }
