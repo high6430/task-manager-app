@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/task.dart';
+import '../models/label.dart';
+import '../services/label_service.dart';
 
 class AddTaskDialog extends StatefulWidget {
   final Function(Task) onTaskAdded;
@@ -16,6 +18,21 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
   Priority selectedPriority = Priority.middle;
+  List<Label> availableLabels = [];
+  Set<String> selectedLabelIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLabels();
+  }
+
+  Future<void> _loadLabels() async {
+    final labels = await LabelService.loadLabels();
+    setState(() {
+      availableLabels = labels;
+    });
+  }
 
   @override
   void dispose() {
@@ -26,9 +43,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
 
   String getTimeText() {
     if (selectedTime != null) {
-      return "${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}";
+      return '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}';
     } else {
-      return "00:00";
+      return '00:00';
     }
   }
 
@@ -46,6 +63,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         deadline,
         priority: selectedPriority,
         description: descriptionController.text,
+        labelIds: selectedLabelIds.toList(),
       );
       widget.onTaskAdded(task);
       Navigator.pop(context);
@@ -55,21 +73,21 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text("新しいタスクを追加"),
+      title: Text('新しいタスクを追加'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: titleController,
-              decoration: InputDecoration(labelText: "タイトル"),
+              decoration: InputDecoration(labelText: 'タイトル'),
             ),
             SizedBox(height: 12),
             TextField(
               controller: descriptionController,
               decoration: InputDecoration(
-                labelText: "詳細（任意）",
-                hintText: "タスクの詳細を入力",
+                labelText: '詳細（任意）',
+                hintText: 'タスクの詳細を入力',
               ),
               maxLines: 3,
               minLines: 1,
@@ -80,15 +98,15 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 Expanded(
                   child: Text(
                     selectedDate == null
-                        ? "締め切り日: 未選択"
-                        : "締め切り日: ${selectedDate!.year}/${selectedDate!.month}/${selectedDate!.day} ${getTimeText()}",
+                        ? '締め切り日: 未選択'
+                        : '締め切り日: ${selectedDate!.year}/${selectedDate!.month}/${selectedDate!.day} ${getTimeText()}',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
                 Column(
                   children: [
                     ElevatedButton(
-                      child: Text("日付選択"),
+                      child: Text('日付選択'),
                       onPressed: () async {
                         final DateTime? picked = await showDatePicker(
                           context: context,
@@ -104,7 +122,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                       },
                     ),
                     ElevatedButton(
-                      child: Text("時間選択"),
+                      child: Text('時間選択'),
                       onPressed: () async {
                         final TimeOfDay? pickedTime = await showTimePicker(
                           context: context,
@@ -123,7 +141,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             ),
             Row(
               children: [
-                Text("優先度: ", style: TextStyle(fontSize: 16)),
+                Text('優先度: ', style: TextStyle(fontSize: 16)),
                 DropdownButton<Priority>(
                   value: selectedPriority,
                   items: Priority.values
@@ -131,10 +149,10 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                             value: p,
                             child: Text(
                               p == Priority.high
-                                  ? "高"
+                                  ? '高'
                                   : p == Priority.middle
-                                      ? "中"
-                                      : "低",
+                                      ? '中'
+                                      : '低',
                             ),
                           ))
                       .toList(),
@@ -148,16 +166,57 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 ),
               ],
             ),
+            SizedBox(height: 12),
+            if (availableLabels.isNotEmpty) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'ラベル:',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              SizedBox(height: 8),
+              ...availableLabels.map((label) {
+                return CheckboxListTile(
+                  title: Row(
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: label.color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Text(label.name),
+                    ],
+                  ),
+                  value: selectedLabelIds.contains(label.id),
+                  onChanged: (bool? value) {
+                    setState(() {
+                      if (value == true) {
+                        selectedLabelIds.add(label.id);
+                      } else {
+                        selectedLabelIds.remove(label.id);
+                      }
+                    });
+                  },
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                );
+              }).toList(),
+            ],
           ],
         ),
       ),
       actions: [
         TextButton(
-          child: Text("キャンセル"),
+          child: Text('キャンセル'),
           onPressed: () => Navigator.pop(context),
         ),
         ElevatedButton(
-          child: Text("追加"),
+          child: Text('追加'),
           onPressed: _addTask,
         ),
       ],

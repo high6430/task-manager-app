@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/task.dart';
+import '../models/label.dart';
+import '../services/label_service.dart';
+import 'label_chip.dart';
 
-class TaskCard extends StatelessWidget {
+class TaskCard extends StatefulWidget {
   final Task task;
   final String currentColumn;
   final VoidCallback onDelete;
@@ -20,6 +23,26 @@ class TaskCard extends StatelessWidget {
     this.onMoveToDoing,
     this.onMoveToDone,
   }) : super(key: key);
+
+  @override
+  _TaskCardState createState() => _TaskCardState();
+}
+
+class _TaskCardState extends State<TaskCard> {
+  List<Label> availableLabels = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLabels();
+  }
+
+  Future<void> _loadLabels() async {
+    final labels = await LabelService.loadLabels();
+    setState(() {
+      availableLabels = labels;
+    });
+  }
 
   Color _getDeadlineColor(DateTime deadline) {
     final now = DateTime.now();
@@ -53,69 +76,78 @@ class TaskCard extends StatelessWidget {
     }
   }
 
+  List<Label> _getTaskLabels() {
+    return widget.task.labelIds
+        .map((id) => LabelService.getLabelById(availableLabels, id))
+        .where((label) => label != null)
+        .cast<Label>()
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final cardColor = _getDeadlineColor(task.deadline);
+    final cardColor = _getDeadlineColor(widget.task.deadline);
     final textColor = _getTextColor(cardColor);
+    final taskLabels = _getTaskLabels();
 
     List<Widget> actionButtons = [];
 
     // 移動ボタン
-    if (currentColumn == "未対応") {
-      if (onMoveToDoing != null) {
+    if (widget.currentColumn == '未対応') {
+      if (widget.onMoveToDoing != null) {
         actionButtons.add(
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               minimumSize: Size(100, 40),
             ),
-            child: Text("進行中へ", style: TextStyle(fontSize: 14)),
-            onPressed: onMoveToDoing,
+            child: Text('進行中へ', style: TextStyle(fontSize: 14)),
+            onPressed: widget.onMoveToDoing,
           ),
         );
       }
-    } else if (currentColumn == "進行中") {
-      if (onMoveToTodo != null) {
+    } else if (widget.currentColumn == '進行中') {
+      if (widget.onMoveToTodo != null) {
         actionButtons.add(
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               minimumSize: Size(100, 40),
             ),
-            child: Text("未対応へ", style: TextStyle(fontSize: 14)),
-            onPressed: onMoveToTodo,
+            child: Text('未対応へ', style: TextStyle(fontSize: 14)),
+            onPressed: widget.onMoveToTodo,
           ),
         );
       }
-      if (onMoveToDone != null) {
+      if (widget.onMoveToDone != null) {
         actionButtons.add(
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               minimumSize: Size(100, 40),
             ),
-            child: Text("完了へ", style: TextStyle(fontSize: 14)),
-            onPressed: onMoveToDone,
+            child: Text('完了へ', style: TextStyle(fontSize: 14)),
+            onPressed: widget.onMoveToDone,
           ),
         );
       }
-    } else if (currentColumn == "完了") {
-      if (onMoveToDoing != null) {
+    } else if (widget.currentColumn == '完了') {
+      if (widget.onMoveToDoing != null) {
         actionButtons.add(
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               minimumSize: Size(100, 40),
             ),
-            child: Text("進行中へ", style: TextStyle(fontSize: 14)),
-            onPressed: onMoveToDoing,
+            child: Text('進行中へ', style: TextStyle(fontSize: 14)),
+            onPressed: widget.onMoveToDoing,
           ),
         );
       }
     }
 
     // 編集ボタン
-    if (onEdit != null) {
+    if (widget.onEdit != null) {
       actionButtons.add(
         ElevatedButton(
           style: ElevatedButton.styleFrom(
@@ -124,8 +156,8 @@ class TaskCard extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             minimumSize: Size(100, 40),
           ),
-          child: Text("編集", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-          onPressed: onEdit,
+          child: Text('編集', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          onPressed: widget.onEdit,
         ),
       );
     }
@@ -139,8 +171,8 @@ class TaskCard extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           minimumSize: Size(0, 40),
         ),
-        child: Text("削除", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-        onPressed: onDelete,
+        child: Text('削除', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        onPressed: widget.onDelete,
       ),
     );
 
@@ -156,25 +188,33 @@ class TaskCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    task.title,
+                    widget.task.title,
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
                     overflow: TextOverflow.visible,
                     softWrap: true,
                   ),
                 ),
                 SizedBox(width: 8),
-                Icon(Icons.circle, color: _priorityColor(task.priority), size: 14),
+                Icon(Icons.circle, color: _priorityColor(widget.task.priority), size: 14),
               ],
             ),
-            if (task.description.isNotEmpty) ...[
+            if (taskLabels.isNotEmpty) ...[
+              SizedBox(height: 8),
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: taskLabels.map((label) => LabelChip(label: label, small: true)).toList(),
+              ),
+            ],
+            if (widget.task.description.isNotEmpty) ...[
               SizedBox(height: 8),
               Text(
-                "詳細:",
+                '詳細:',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
               ),
               SizedBox(height: 2),
               Text(
-                task.description,
+                widget.task.description,
                 style: TextStyle(fontSize: 12, color: textColor),
                 overflow: TextOverflow.visible,
                 softWrap: true,
@@ -182,8 +222,8 @@ class TaskCard extends StatelessWidget {
             ],
             SizedBox(height: 4),
             Text(
-              "締め切り: ${task.deadline.year}/${task.deadline.month}/${task.deadline.day} "
-              "${task.deadline.hour.toString().padLeft(2, '0')}:${task.deadline.minute.toString().padLeft(2, '0')}",
+              '締め切り: ${widget.task.deadline.year}/${widget.task.deadline.month}/${widget.task.deadline.day} '
+              '${widget.task.deadline.hour.toString().padLeft(2, '0')}:${widget.task.deadline.minute.toString().padLeft(2, '0')}',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor),
             ),
             SizedBox(height: 8),

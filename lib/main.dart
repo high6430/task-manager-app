@@ -11,6 +11,7 @@ class TaskManagerApp extends StatelessWidget {
     return MaterialApp(
       title: 'タスク管理アプリ',
       theme: ThemeData(primarySwatch: Colors.blue),
+      debugShowCheckedModeBanner: false,
       home: TaskBoardScreen(),
     );
   }
