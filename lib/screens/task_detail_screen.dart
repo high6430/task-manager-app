@@ -6,6 +6,7 @@ import '../models/notification_timing.dart';
 import '../services/notification_set_service.dart';
 import '../widgets/label_chip.dart';
 import '../widgets/edit_task_dialog.dart';
+import 'package:task_manager_app/utils/logger.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   final Task task;
@@ -93,9 +94,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   void _showCompleteConfirmDialog() {
-    print('🟢🟢🟢 完了確認ダイアログを表示します 🟢🟢🟢');
-    print('widget.onComplete: ${widget.onComplete}');
-    print('widget.onComplete is null: ${widget.onComplete == null}');
+    Logger.log('🟢🟢🟢 完了確認ダイアログを表示します 🟢🟢🟢');
+    Logger.log('widget.onComplete: ${widget.onComplete}');
+    Logger.log('widget.onComplete is null: ${widget.onComplete == null}');
     
     showDialog(
       context: context,
@@ -106,7 +107,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           TextButton(
             child: const Text('キャンセル'),
             onPressed: () {
-              print('⚠️ ユーザーがキャンセルしました');
+              Logger.warning(' ユーザーがキャンセルしました');
               Navigator.pop(context);
             },
           ),
@@ -117,19 +118,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
             child: const Text('完了にする'),
             onPressed: () {
-              print('✅ ユーザーが「完了にする」を選択しました');
+              Logger.success(' ユーザーが「完了にする」を選択しました');
               Navigator.pop(context); // ダイアログを閉じる
               
               if (widget.onComplete != null) {
-                print('widget.onComplete を呼び出します');
+                Logger.log('widget.onComplete を呼び出します');
                 widget.onComplete!();
-                print('✅ widget.onComplete 呼び出し完了');
+                Logger.success(' widget.onComplete 呼び出し完了');
               } else {
-                print('❌ エラー: widget.onComplete が null です');
+                Logger.error(' エラー: widget.onComplete が null です');
               }
               
               Navigator.pop(context); // タスク確認画面を閉じる
-              print('✅ タスク確認画面を閉じました');
+              Logger.success(' タスク確認画面を閉じました');
             },
           ),
         ],
@@ -399,9 +400,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               child: ElevatedButton(
                 child: const Text('編集'),
                 onPressed: () async {
-                  print('🔧🔧🔧 編集ボタンがタップされました 🔧🔧🔧');
-                  print('タスクID: ${widget.task.id}');
-                  print('タスク名: ${widget.task.title}');
+                  Logger.log('🔧🔧🔧 編集ボタンがタップされました 🔧🔧🔧');
+                  Logger.log('タスクID: ${widget.task.id}');
+                  Logger.log('タスク名: ${widget.task.title}');
                   
                   // 編集ダイアログを開く
                   final result = await showDialog<bool>(
@@ -411,32 +412,32 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       task: widget.task,
                       availableLabels: widget.availableLabels, // ラベルを渡す
                       onTaskUpdated: (updatedTask) async {
-                        print('📝 EditTaskDialog から onTaskUpdated が呼ばれました');
-                        print('更新後タスクID: ${updatedTask.id}');
-                        print('更新後タスク名: ${updatedTask.title}');
+                        Logger.log('📝 EditTaskDialog から onTaskUpdated が呼ばれました');
+                        Logger.log('更新後タスクID: ${updatedTask.id}');
+                        Logger.log('更新後タスク名: ${updatedTask.title}');
                         
-                        print('widget.onTaskUpdated を呼び出します（await）');
+                        Logger.log('widget.onTaskUpdated を呼び出します（await）');
                         // タスク更新コールバックを呼び、完了を待つ
                         await widget.onTaskUpdated(updatedTask);
-                        print('✅ widget.onTaskUpdated 呼び出し完了');
+                        Logger.success(' widget.onTaskUpdated 呼び出し完了');
                         
                         // 更新処理が完了してからダイアログを閉じる
                         Navigator.of(dialogContext).pop(true);
-                        print('✅ ダイアログを閉じました');
+                        Logger.success(' ダイアログを閉じました');
                       },
                     ),
                   );
                   
-                  print('showDialog が完了しました');
-                  print('result: $result');
+                  Logger.log('showDialog が完了しました');
+                  Logger.log('result: $result');
                   
                   // ダイアログが正常に閉じられた場合、詳細画面も閉じる
                   if (result == true && mounted) {
-                    print('詳細画面を閉じます');
+                    Logger.log('詳細画面を閉じます');
                     Navigator.of(context).pop();
-                    print('✅ 詳細画面を閉じました');
+                    Logger.success(' 詳細画面を閉じました');
                   } else {
-                    print('⚠️ ダイアログがキャンセルされたか、mountedがfalseです');
+                    Logger.warning(' ダイアログがキャンセルされたか、mountedがfalseです');
                   }
                 },
               ),
@@ -451,9 +452,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   ),
                   child: const Text('完了へ'),
                   onPressed: () {
-                    print('🟢 「完了へ」ボタンがタップされました');
-                    print('currentColumn: ${widget.currentColumn}');
-                    print('onComplete is null: ${widget.onComplete == null}');
+                    Logger.log('🟢 「完了へ」ボタンがタップされました');
+                    Logger.log('currentColumn: ${widget.currentColumn}');
+                    Logger.log('onComplete is null: ${widget.onComplete == null}');
                     _showCompleteConfirmDialog();
                   },
                 ),

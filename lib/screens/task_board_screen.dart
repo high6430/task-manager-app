@@ -13,6 +13,7 @@ import 'settings_screen.dart';
 import 'dart:io';
 import 'dart:async';
 import 'task_detail_screen.dart';
+import 'package:task_manager_app/utils/logger.dart';
 
 class TaskBoardScreen extends StatefulWidget {
   @override
@@ -44,32 +45,32 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
     _tabController = TabController(length: 3, vsync: this);
 
     // 通知イベントの購読を最初に設定
-    print('=== Stream購読開始 ===');
+    Logger.section(' Stream購読開始 ');
 
     // 通知からのタスク完了イベントを購読
     _taskCompleteSubscription = NotificationService.taskCompleteStream.listen(
       (taskId) {
-        print('📬 タスク完了イベント受信: $taskId');
+        Logger.log('📬 タスク完了イベント受信: $taskId');
         _completeTaskFromNotification(taskId);
       },
       onError: (error) {
-        print('❌ タスク完了イベントエラー: $error');
+        Logger.error(' タスク完了イベントエラー: $error');
       },
     );
 
     // 通知からのタスク詳細表示イベントを購読
     _taskDetailsSubscription = NotificationService.taskDetailsStream.listen(
       (taskId) {
-        print('📬 タスク詳細表示イベント受信: $taskId');
+        Logger.log('📬 タスク詳細表示イベント受信: $taskId');
         _showTaskDetailsFromNotification(taskId);
       },
       onError: (error) {
-        print('❌ タスク詳細表示イベントエラー: $error');
+        Logger.error(' タスク詳細表示イベントエラー: $error');
       },
     );
 
-    print('✅ Stream購読完了');
-    print('=== Stream購読終了 ===\n');
+    Logger.success(' Stream購読完了');
+    Logger.sectionEnd(' Stream購読');
 
     // データ読み込み
     _loadData();
@@ -272,9 +273,9 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
             _editTask(task, columnName);
           },
           onTaskUpdated: (updatedTask) async {
-            print('🔄 TaskBoardScreen: onTaskUpdated が呼ばれました');
-            print('更新タスクID: ${updatedTask.id}');
-            print('カラム: $columnName');
+            Logger.log('🔄 TaskBoardScreen: onTaskUpdated が呼ばれました');
+            Logger.log('更新タスクID: ${updatedTask.id}');
+            Logger.log('カラム: $columnName');
 
             setState(() {
               List<Task> targetList;
@@ -291,27 +292,27 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
               );
               if (index != -1) {
                 targetList[index] = updatedTask;
-                print('✅ タスクを更新しました');
+                Logger.success(' タスクを更新しました');
               } else {
-                print('❌ エラー: タスクが見つかりませんでした（index: $index）');
+                Logger.error(' エラー: タスクが見つかりませんでした（index: $index）');
               }
               _updateFilteredTasks();
             });
 
-            print('タスクを保存します');
+            Logger.log('タスクを保存します');
             await _saveTasks();
-            print('✅ タスク保存完了');
+            Logger.success(' タスク保存完了');
 
             // 通知を再スケジュール
-            print('通知を再スケジュールします');
+            Logger.log('通知を再スケジュールします');
             await NotificationService.scheduleTaskNotifications(
               updatedTask,
               updatedTask.id,
               columnName,
             );
-            print('✅ 通知再スケジュール完了');
+            Logger.success(' 通知再スケジュール完了');
 
-            print('✅ TaskBoardScreen: onTaskUpdated 完了\n');
+            Logger.success(' TaskBoardScreen: onTaskUpdated 完了\n');
           },
           onMoveToTodo: columnName == '進行中'
               ? () async {
@@ -355,36 +356,36 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
               : null,
           onMoveToDone: (columnName == '進行中' || columnName == '未対応')
               ? () async {
-                  print('🟢 onMoveToDone が呼ばれました');
-                  print('カラム: $columnName');
-                  print('タスクID: ${task.id}');
+                  Logger.log('🟢 onMoveToDone が呼ばれました');
+                  Logger.log('カラム: $columnName');
+                  Logger.log('タスクID: ${task.id}');
 
                   setState(() {
                     if (columnName == '未対応') {
                       todoTasks.remove(task);
-                      print('未対応リストから削除');
+                      Logger.log('未対応リストから削除');
                     } else if (columnName == '進行中') {
                       doingTasks.remove(task);
-                      print('進行中リストから削除');
+                      Logger.log('進行中リストから削除');
                     }
                     doneTasks.add(task);
                     _updateFilteredTasks();
-                    print('完了リストに追加');
+                    Logger.log('完了リストに追加');
                   });
 
                   await _saveTasks();
-                  print('✅ タスク保存完了');
+                  Logger.success(' タスク保存完了');
 
                   // 完了時は通知をキャンセル
                   final taskId = task.id;
                   await NotificationService.cancelTaskNotifications(taskId);
-                  print('✅ 通知キャンセル完了');
+                  Logger.success(' 通知キャンセル完了');
 
                   // 完了タブに切り替え
                   _tabController.animateTo(2);
-                  print('完了タブに切り替え');
+                  Logger.log('完了タブに切り替え');
 
-                  print('🟢 onMoveToDone 完了\n');
+                  Logger.log('🟢 onMoveToDone 完了\n');
                 }
               : null,
         );
@@ -405,8 +406,8 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
     final notificationGranted = permissions['notification'] ?? false;
     final alarmGranted = permissions['exactAlarm'] ?? false;
 
-    print('通知権限: $notificationGranted');
-    print('アラーム権限: $alarmGranted');
+    Logger.log('通知権限: $notificationGranted');
+    Logger.log('アラーム権限: $alarmGranted');
 
     // どちらかが許可されていない場合、ダイアログ表示
     if (!notificationGranted || !alarmGranted) {
@@ -473,8 +474,8 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
 
   // 通知からタスクを完了にする
   Future<void> _completeTaskFromNotification(String taskId) async {
-    print('--- 通知からタスク完了処理開始 ---');
-    print('タスクID: $taskId');
+    Logger.log('--- 通知からタスク完了処理開始 ---');
+    Logger.log('タスクID: $taskId');
 
     Task? targetTask;
     String? columnName;
@@ -501,21 +502,21 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
     if (targetTask == null) {
       for (var task in doneTasks) {
         if (task.id == taskId) {
-          print('⚠️ タスクは既に完了済みです');
-          print('--- 通知からタスク完了処理終了 ---\n');
+          Logger.warning(' タスクは既に完了済みです');
+          Logger.log('--- 通知からタスク完了処理終了 ---\n');
           return;
         }
       }
     }
 
     if (targetTask == null) {
-      print('❌ タスクが見つかりませんでした');
-      print('--- 通知からタスク完了処理終了 ---\n');
+      Logger.error(' タスクが見つかりませんでした');
+      Logger.log('--- 通知からタスク完了処理終了 ---\n');
       return;
     }
 
-    print('✅ タスクを発見: ${targetTask.title}');
-    print('現在のカラム: $columnName');
+    Logger.success(' タスクを発見: ${targetTask.title}');
+    Logger.log('現在のカラム: $columnName');
     
     // 確認ダイアログを表示
     if (mounted) {
@@ -542,8 +543,8 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
       );
 
       if (confirmed != true) {
-        print('⚠️ ユーザーがキャンセルしました');
-        print('--- 通知からタスク完了処理終了 ---\n');
+        Logger.warning(' ユーザーがキャンセルしました');
+        Logger.log('--- 通知からタスク完了処理終了 ---\n');
         return;
       }
     }
@@ -567,8 +568,8 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
     // 完了タブに切り替え
     _tabController.animateTo(2);
 
-    print('✅ タスクを完了にしました');
-    print('--- 通知からタスク完了処理終了 ---\n');
+    Logger.success(' タスクを完了にしました');
+    Logger.log('--- 通知からタスク完了処理終了 ---\n');
 
     // スナックバーで通知
     if (mounted) {
@@ -584,8 +585,8 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
 
   // 通知からタスク詳細を表示
   Future<void> _showTaskDetailsFromNotification(String taskId) async {
-    print('--- 通知からタスク詳細表示処理開始 ---');
-    print('タスクID: $taskId');
+    Logger.log('--- 通知からタスク詳細表示処理開始 ---');
+    Logger.log('タスクID: $taskId');
 
     Task? targetTask;
     String? columnName;
@@ -620,8 +621,8 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
     }
 
     if (targetTask == null) {
-      print('❌ タスクが見つかりませんでした');
-      print('--- 通知からタスク詳細表示処理終了 ---\n');
+      Logger.error(' タスクが見つかりませんでした');
+      Logger.log('--- 通知からタスク詳細表示処理終了 ---\n');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -631,8 +632,8 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
       return;
     }
 
-    print('✅ タスクを発見: ${targetTask.title}');
-    print('現在のカラム: $columnName');
+    Logger.success(' タスクを発見: ${targetTask.title}');
+    Logger.log('現在のカラム: $columnName');
 
     // 適切なタブに切り替え
     if (columnName == '未対応') {
@@ -643,7 +644,7 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
       _tabController.animateTo(2);
     }
 
-    print('--- 通知からタスク詳細表示処理終了 ---\n');
+    Logger.log('--- 通知からタスク詳細表示処理終了 ---\n');
 
     // タスク詳細画面に遷移
     if (mounted) {
@@ -655,10 +656,10 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
             currentColumn: columnName!,
             availableLabels: availableLabels,
             onTaskUpdated: (updatedTask) async {
-              print('🔄🔄🔄 タスク更新処理開始（通知から） 🔄🔄🔄');
-              print('更新タスクID: ${updatedTask.id}');
-              print('更新タスク名: ${updatedTask.title}');
-              print('現在のカラム: $columnName');
+              Logger.log('🔄🔄🔄 タスク更新処理開始（通知から） 🔄🔄🔄');
+              Logger.log('更新タスクID: ${updatedTask.id}');
+              Logger.log('更新タスク名: ${updatedTask.title}');
+              Logger.log('現在のカラム: $columnName');
 
               // タスク更新処理
               setState(() {
@@ -671,73 +672,73 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
                   targetList = doneTasks;
                 }
 
-                print('対象リストのタスク数: ${targetList.length}');
+                Logger.log('対象リストのタスク数: ${targetList.length}');
 
                 final index = targetList.indexWhere(
                   (t) => t.id == updatedTask.id,
                 );
-                print('タスクのインデックス: $index');
+                Logger.log('タスクのインデックス: $index');
 
                 if (index != -1) {
-                  print('タスクを更新します');
+                  Logger.log('タスクを更新します');
                   targetList[index] = updatedTask;
-                  print('✅ タスクを更新しました: ${updatedTask.title}');
+                  Logger.success(' タスクを更新しました: ${updatedTask.title}');
                 } else {
-                  print('❌ エラー: タスクが見つかりませんでした');
-                  print('検索対象リスト:');
+                  Logger.error(' エラー: タスクが見つかりませんでした');
+                  Logger.log('検索対象リスト:');
                   for (var t in targetList) {
-                    print('  - ID: ${t.id}, タイトル: ${t.title}');
+                    Logger.log('  - ID: ${t.id}, タイトル: ${t.title}');
                   }
                 }
                 _updateFilteredTasks();
               });
 
-              print('タスクを保存します');
+              Logger.log('タスクを保存します');
               await _saveTasks();
-              print('✅ タスク保存完了');
+              Logger.success(' タスク保存完了');
 
               // 通知を再スケジュール
-              print('通知を再スケジュールします');
+              Logger.log('通知を再スケジュールします');
               await NotificationService.scheduleTaskNotifications(
                 updatedTask,
                 updatedTask.id,
                 columnName!,
               );
-              print('✅ 通知再スケジュール完了');
-              print('🔄🔄🔄 タスク更新処理完了（通知から） 🔄🔄🔄\n');
+              Logger.success(' 通知再スケジュール完了');
+              Logger.log('🔄🔄🔄 タスク更新処理完了（通知から） 🔄🔄🔄\n');
             },
             onComplete: columnName != '完了'
                 ? () async {
-                    print('--- 完了処理開始（詳細画面から・通知経由） ---');
-                    print('タスクID: $taskId');
+                    Logger.log('--- 完了処理開始（詳細画面から・通知経由） ---');
+                    Logger.log('タスクID: $taskId');
 
                     // タスクを完了にする処理
                     setState(() {
                       if (columnName == '未対応') {
                         todoTasks.remove(targetTask);
-                        print('未対応リストから削除');
+                        Logger.log('未対応リストから削除');
                       } else if (columnName == '進行中') {
                         doingTasks.remove(targetTask);
-                        print('進行中リストから削除');
+                        Logger.log('進行中リストから削除');
                       }
                       doneTasks.add(targetTask!);
                       _updateFilteredTasks();
-                      print('完了リストに追加');
+                      Logger.log('完了リストに追加');
                     });
 
                     await _saveTasks();
-                    print('✅ タスク保存完了');
+                    Logger.success(' タスク保存完了');
 
                     // 通知をキャンセル
                     await NotificationService.cancelTaskNotifications(taskId);
-                    print('✅ 通知キャンセル完了');
+                    Logger.success(' 通知キャンセル完了');
 
                     // 完了タブに切り替え
                     _tabController.animateTo(2);
-                    print('完了タブに切り替え');
+                    Logger.log('完了タブに切り替え');
 
-                    print('✅ タスクを完了にしました');
-                    print('--- 完了処理終了（詳細画面から・通知経由） ---\n');
+                    Logger.success(' タスクを完了にしました');
+                    Logger.log('--- 完了処理終了（詳細画面から・通知経由） ---\n');
 
                     // スナックバーで通知
                     if (mounted) {

@@ -8,6 +8,7 @@ import '../models/notification_timing.dart';
 import '../services/notification_set_service.dart';
 import '../services/app_settings_service.dart';
 import 'dart:async';
+import 'package:task_manager_app/utils/logger.dart';
 
 
 class NotificationService {
@@ -30,16 +31,16 @@ class NotificationService {
   // 通知サービスの初期化
 static Future<void> initialize() async {
   if (_initialized) {
-    print('⚠️ NotificationService は既に初期化済みです');
+    Logger.warning(' NotificationService は既に初期化済みです');
     return;
   }
 
-  print('=== NotificationService 初期化開始 ===');
+  Logger.section(' NotificationService 初期化開始 ');
 
   // タイムゾーンデータの初期化
   tz.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation('Asia/Tokyo'));
-  print('✅ タイムゾーン設定: Asia/Tokyo');
+  Logger.success(' タイムゾーン設定: Asia/Tokyo');
 
   // Android設定
   const androidSettings = notifications.AndroidInitializationSettings(
@@ -88,9 +89,9 @@ static Future<void> initialize() async {
   );
 
   if (initialized == true) {
-    print('✅ FlutterLocalNotifications 初期化成功');
+    Logger.success(' FlutterLocalNotifications 初期化成功');
   } else {
-    print('❌ FlutterLocalNotifications 初期化失敗');
+    Logger.error(' FlutterLocalNotifications 初期化失敗');
   }
 
   // 通知チャンネルの作成（Android）
@@ -99,12 +100,12 @@ static Future<void> initialize() async {
   }
 
   _initialized = true;
-  print('=== NotificationService 初期化完了 ===\n');
+  Logger.sectionEnd(' NotificationService 初期化完了 ');
 }
 
   // 通知チャンネルの作成（グループ化用）
   static Future<void> _createNotificationChannel() async {
-    print('--- 通知チャンネル作成開始 ---');
+    Logger.log('--- 通知チャンネル作成開始 ---');
     
     const androidChannel = notifications.AndroidNotificationChannel(
       'task_notifications',
@@ -120,26 +121,26 @@ static Future<void> initialize() async {
         notifications.AndroidFlutterLocalNotificationsPlugin>();
 
     if (androidPlugin == null) {
-      print('❌ AndroidFlutterLocalNotificationsPlugin が取得できません');
+      Logger.error(' AndroidFlutterLocalNotificationsPlugin が取得できません');
       return;
     }
 
     await androidPlugin.createNotificationChannel(androidChannel);
-    print('✅ 通知チャンネル作成完了');
-    print('   ID: ${androidChannel.id}');
-    print('   名前: ${androidChannel.name}');
-    print('   重要度: ${androidChannel.importance}');
+    Logger.success(' 通知チャンネル作成完了');
+    Logger.log('   ID: ${androidChannel.id}');
+    Logger.log('   名前: ${androidChannel.name}');
+    Logger.log('   重要度: ${androidChannel.importance}');
     
     // 作成されたチャンネルを確認
     final channels = await androidPlugin.getNotificationChannels();
     if (channels != null) {
-      print('✅ 登録済み通知チャンネル数: ${channels.length}');
+      Logger.success(' 登録済み通知チャンネル数: ${channels.length}');
       for (var channel in channels) {
-        print('   - ${channel.id}: ${channel.name} (重要度: ${channel.importance})');
+        Logger.log('   - ${channel.id}: ${channel.name} (重要度: ${channel.importance})');
       }
     }
     
-    print('--- 通知チャンネル作成完了 ---\n');
+    Logger.log('--- 通知チャンネル作成完了 ---\n');
   }
 
   // 通知権限のリクエスト
@@ -163,7 +164,7 @@ static Future<bool> requestPermission() async {
         badge: true,
         sound: true,
       );
-      print('iOS通知権限: $granted');
+      Logger.log('iOS通知権限: $granted');
       return granted ?? false;
     }
     
@@ -176,11 +177,11 @@ static Future<bool> requestPermission() async {
 
 // 通知がタップされた時の処理
 static void _onNotificationTapped(notifications.NotificationResponse response) {
-  print('=== 通知タップイベント ===');
-  print('通知ID: ${response.id}');
-  print('アクション: ${response.actionId}');
-  print('payload: ${response.payload}');
-  print('通知タイプ: ${response.notificationResponseType}');
+  Logger.section(' 通知タップイベント ');
+  Logger.log('通知ID: ${response.id}');
+  Logger.log('アクション: ${response.actionId}');
+  Logger.log('payload: ${response.payload}');
+  Logger.log('通知タイプ: ${response.notificationResponseType}');
   
   final actionId = response.actionId;
   final taskId = response.payload;
@@ -188,52 +189,52 @@ static void _onNotificationTapped(notifications.NotificationResponse response) {
   // 少し遅延させてからイベントを送信（Streamの購読準備を待つ）
   Future.delayed(Duration(milliseconds: 500), () {
     if (actionId == 'complete') {
-      print('✅ 「完了」ボタンがタップされました');
-      print('タスクID: $taskId');
+      Logger.success(' 「完了」ボタンがタップされました');
+      Logger.log('タスクID: $taskId');
       
       if (taskId != null) {
         _handleCompleteAction(taskId);
       }
     } else if (actionId == 'details') {
-      print('📋 「詳細を見る」ボタンがタップされました');
-      print('タスクID: $taskId');
+      Logger.log('📋 「詳細を見る」ボタンがタップされました');
+      Logger.log('タスクID: $taskId');
       
       if (taskId != null) {
         _handleDetailsAction(taskId);
       }
     } else {
-      print('📱 通知本体がタップされました');
+      Logger.log('📱 通知本体がタップされました');
       if (taskId != null) {
         _handleDetailsAction(taskId);
       }
     }
   });
   
-  print('=== 通知タップイベント終了 ===\n');
+  Logger.sectionEnd(' 通知タップイベント');
 }
 
   // 「完了」アクションの処理
   static void _handleCompleteAction(String taskId) {
-    print('--- 完了アクション処理開始 ---');
-    print('タスクID: $taskId');
+    Logger.log('--- 完了アクション処理開始 ---');
+    Logger.log('タスクID: $taskId');
     
     // StreamControllerを使って、タスク完了イベントを通知
     _taskCompleteController.add(taskId);
     
-    print('✅ タスク完了イベントを送信しました');
-    print('--- 完了アクション処理終了 ---\n');
+    Logger.success(' タスク完了イベントを送信しました');
+    Logger.log('--- 完了アクション処理終了 ---\n');
   }
   
   // 「詳細を見る」アクションの処理
   static void _handleDetailsAction(String taskId) {
-    print('--- 詳細表示アクション処理開始 ---');
-    print('タスクID: $taskId');
+    Logger.log('--- 詳細表示アクション処理開始 ---');
+    Logger.log('タスクID: $taskId');
     
     // StreamControllerを使って、タスク詳細表示イベントを通知
     _taskDetailsController.add(taskId);
     
-    print('✅ タスク詳細表示イベントを送信しました');
-    print('--- 詳細表示アクション処理終了 ---\n');
+    Logger.success(' タスク詳細表示イベントを送信しました');
+    Logger.log('--- 詳細表示アクション処理終了 ---\n');
   }
 
   // タスクの通知をスケジュール
@@ -242,28 +243,28 @@ static void _onNotificationTapped(notifications.NotificationResponse response) {
     String taskId,
     String columnName,
   ) async {
-    print('=== scheduleTaskNotifications 開始 ===');
-    print('タスクID: $taskId');
-    print('カラム: $columnName');
+    Logger.section(' scheduleTaskNotifications 開始 ');
+    Logger.log('タスクID: $taskId');
+    Logger.log('カラム: $columnName');
     
     // アプリ全体の通知設定を確認
     final settings = await AppSettingsService.loadSettings();
-    print('アプリ全体の通知: ${settings.notificationEnabled}');
+    Logger.log('アプリ全体の通知: ${settings.notificationEnabled}');
     if (!settings.notificationEnabled) {
-      print('❌ アプリ全体の通知がOFFのためスキップ');
+      Logger.error(' アプリ全体の通知がOFFのためスキップ');
       return;
     }
 
     // タスクの通知設定を確認
-    print('タスクの通知: ${task.notificationEnabled}');
+    Logger.log('タスクの通知: ${task.notificationEnabled}');
     if (!task.notificationEnabled) {
-      print('❌ タスクの通知がOFFのためスキップ');
+      Logger.error(' タスクの通知がOFFのためスキップ');
       return;
     }
 
     // 完了タスクには通知しない
     if (columnName == '完了') {
-      print('❌ 完了タスクのためスキップ');
+      Logger.error(' 完了タスクのためスキップ');
       return;
     }
 
@@ -272,11 +273,11 @@ static void _onNotificationTapped(notifications.NotificationResponse response) {
 
     // 全ての通知タイミングを取得
     final allTimings = await _getAllNotificationTimings(task);
-    print('通知タイミング数: ${allTimings.length}');
+    Logger.log('通知タイミング数: ${allTimings.length}');
 
     // 通知数制限（最大5個）
     if (allTimings.length > 5) {
-      print('⚠️ 通知が5個を超えるため、最初の5個のみスケジュール');
+      Logger.warning(' 通知が5個を超えるため、最初の5個のみスケジュール');
       allTimings.removeRange(5, allTimings.length);
     }
 
@@ -291,7 +292,7 @@ static void _onNotificationTapped(notifications.NotificationResponse response) {
       );
     }
     
-    print('=== scheduleTaskNotifications 完了 ===\n');
+    Logger.sectionEnd(' scheduleTaskNotifications 完了 ');
   }
 
   // 全ての通知タイミングを取得（統合＆ソート）
@@ -305,22 +306,22 @@ static void _onNotificationTapped(notifications.NotificationResponse response) {
       final set =
           NotificationSetService.getNotificationSetById(notificationSets, setId);
       if (set != null) {
-        print('通知セット「${set.name}」を追加: ${set.timings.length}個');
+        Logger.log('通知セット「${set.name}」を追加: ${set.timings.length}個');
         allTimings.addAll(set.timings);
       }
     }
 
     // カスタム通知を追加
-    print('カスタム通知を追加: ${task.customTimings.length}個');
+    Logger.log('カスタム通知を追加: ${task.customTimings.length}個');
     allTimings.addAll(task.customTimings);
 
     // 重複を削除してソート（近い順）
     final uniqueTimings = allTimings.toSet().toList()
       ..sort((a, b) => a.compareTo(b));
 
-    print('統合後の通知数: ${uniqueTimings.length}個');
+    Logger.log('統合後の通知数: ${uniqueTimings.length}個');
     for (var timing in uniqueTimings) {
-      print('  - ${timing.displayText}');
+      Logger.log('  - ${timing.displayText}');
     }
 
     return uniqueTimings;
@@ -333,10 +334,10 @@ static void _onNotificationTapped(notifications.NotificationResponse response) {
     NotificationTiming timing,
     int notificationId,
   ) async {
-    print('\n--- 通知スケジュール開始 ---');
-    print('タスクID: $taskId');
-    print('通知ID: $notificationId');
-    print('タイミング: ${timing.displayText}');
+    Logger.log('\n--- 通知スケジュール開始 ---');
+    Logger.log('タスクID: $taskId');
+    Logger.log('通知ID: $notificationId');
+    Logger.log('タイミング: ${timing.displayText}');
     
     // 通知時刻を計算
     final notificationTime = task.deadline.subtract(Duration(
@@ -345,18 +346,18 @@ static void _onNotificationTapped(notifications.NotificationResponse response) {
       minutes: timing.minutes,
     ));
 
-    print('締切時刻: ${task.deadline}');
-    print('通知時刻: $notificationTime');
-    print('現在時刻: ${DateTime.now()}');
+    Logger.log('締切時刻: ${task.deadline}');
+    Logger.log('通知時刻: $notificationTime');
+    Logger.log('現在時刻: ${DateTime.now()}');
     
     // 過去の時刻の場合はスケジュールしない
     if (notificationTime.isBefore(DateTime.now())) {
-      print('❌ 過去の時刻のためスキップ');
-      print('--- 通知スケジュール終了 ---\n');
+      Logger.error(' 過去の時刻のためスキップ');
+      Logger.log('--- 通知スケジュール終了 ---\n');
       return;
     }
     
-    print('✅ 通知をスケジュールします');
+    Logger.success(' 通知をスケジュールします');
 
     // 優先度アイコン
     final priorityIcon = _getPriorityIcon(task.priority);
@@ -366,12 +367,12 @@ static void _onNotificationTapped(notifications.NotificationResponse response) {
     final body =
         '${timing.displayText}\n締切: ${_formatDeadline(task.deadline)}';
 
-    print('通知タイトル: $title');
-    print('通知本文: $body');
+    Logger.log('通知タイトル: $title');
+    Logger.log('通知本文: $body');
 
     // バイブレーション設定を取得
     final vibration = await _shouldVibrate(task);
-    print('バイブレーション: $vibration');
+    Logger.log('バイブレーション: $vibration');
 
     // Android通知詳細
 final androidDetails = notifications.AndroidNotificationDetails(
@@ -431,14 +432,14 @@ const iosDetails = notifications.DarwinNotificationDetails(
       final now = tz.TZDateTime.now(tz.local);
       final difference = scheduledDate.difference(now);
       
-      print('スケジュール日時（TZ）: $scheduledDate');
-      print('現在日時（TZ）: $now');
-      print('差分: ${difference.inSeconds}秒後 (${difference.inMinutes}分${difference.inSeconds % 60}秒)');
+      Logger.log('スケジュール日時（TZ）: $scheduledDate');
+      Logger.log('現在日時（TZ）: $now');
+      Logger.log('差分: ${difference.inSeconds}秒後 (${difference.inMinutes}分${difference.inSeconds % 60}秒)');
       
       // 過去の時刻チェック（念のため再確認）
       if (scheduledDate.isBefore(now)) {
-        print('❌ エラー: スケジュール時刻が過去です');
-        print('--- 通知スケジュール終了（失敗） ---\n');
+        Logger.error(' エラー: スケジュール時刻が過去です');
+        Logger.log('--- 通知スケジュール終了（失敗） ---\n');
         return;
       }
       
@@ -456,14 +457,14 @@ const iosDetails = notifications.DarwinNotificationDetails(
         matchDateTimeComponents: null,
       );
 
-      print('✅ 通知スケジュール完了');
-      print('通知ID: $notificationId');
+      Logger.success(' 通知スケジュール完了');
+      Logger.log('通知ID: $notificationId');
     } catch (e) {
-      print('❌ 通知スケジュールエラー: $e');
-      print('エラー詳細: ${e.toString()}');
+      Logger.error(' 通知スケジュールエラー: $e');
+      Logger.log('エラー詳細: ${e.toString()}');
     }
     
-    print('--- 通知スケジュール終了 ---\n');
+    Logger.log('--- 通知スケジュール終了 ---\n');
   }
 
   // 優先度アイコンを取得
@@ -504,7 +505,7 @@ const iosDetails = notifications.DarwinNotificationDetails(
 
   // タスクの通知をキャンセル
   static Future<void> cancelTaskNotifications(String taskId) async {
-    print('通知キャンセル: $taskId');
+    Logger.log('通知キャンセル: $taskId');
     final notificationId = _generateNotificationId(taskId);
     // 最大5個の通知をキャンセル
     for (int i = 0; i < 5; i++) {
@@ -519,7 +520,7 @@ const iosDetails = notifications.DarwinNotificationDetails(
 
   // テスト通知を送信（開発用）
   static Future<void> sendTestNotification() async {
-    print('=== テスト通知送信 ===');
+    Logger.section(' テスト通知送信 ');
     const androidDetails = notifications.AndroidNotificationDetails(
       'task_notifications',
       'タスク通知',
@@ -545,22 +546,22 @@ const iosDetails = notifications.DarwinNotificationDetails(
       'これはテスト通知です。通知が正常に動作しています。',
       notificationDetails,
     );
-    print('✅ テスト通知送信完了');
+    Logger.success(' テスト通知送信完了');
   }
 
   // 1分後通知テスト（開発用）
   // 1分後通知テスト（開発用）
   static Future<void> sendTestNotificationIn1Minute() async {
-    print('=== 1分後通知テスト ===');
+    Logger.section(' 1分後通知テスト ');
     
     final now = tz.TZDateTime.now(tz.local);
     final scheduledDate = now.add(Duration(minutes: 1));
     
-    print('現在時刻（詳細）: ${now.year}/${now.month}/${now.day} ${now.hour}:${now.minute}:${now.second}');
-    print('通知時刻（詳細）: ${scheduledDate.year}/${scheduledDate.month}/${scheduledDate.day} ${scheduledDate.hour}:${scheduledDate.minute}:${scheduledDate.second}');
+    Logger.log('現在時刻（詳細）: ${now.year}/${now.month}/${now.day} ${now.hour}:${now.minute}:${now.second}');
+    Logger.log('通知時刻（詳細）: ${scheduledDate.year}/${scheduledDate.month}/${scheduledDate.day} ${scheduledDate.hour}:${scheduledDate.minute}:${scheduledDate.second}');
     
     final difference = scheduledDate.difference(now);
-    print('差分: ${difference.inSeconds}秒後 (${difference.inMinutes}分${difference.inSeconds % 60}秒)');
+    Logger.log('差分: ${difference.inSeconds}秒後 (${difference.inMinutes}分${difference.inSeconds % 60}秒)');
 
 final androidDetails = notifications.AndroidNotificationDetails(
   'task_notifications',
@@ -618,16 +619,16 @@ await _notifications.zonedSchedule(
   matchDateTimeComponents: null,
 );
 
-      print('✅ 1分後通知をスケジュールしました');
-      print('通知ID: 999998');
+      Logger.success(' 1分後通知をスケジュールしました');
+      Logger.log('通知ID: 999998');
       
       // スケジュール済み通知を確認
       await printPendingNotifications();
       
     } catch (e) {
-      print('❌ エラー: $e');
-      print('エラー詳細: ${e.toString()}');
-      print('スタックトレース: ${StackTrace.current}');
+      Logger.error(' エラー: $e');
+      Logger.log('エラー詳細: ${e.toString()}');
+      Logger.log('スタックトレース: ${StackTrace.current}');
     }
   }
 
@@ -643,7 +644,7 @@ await _notifications.zonedSchedule(
     if (Platform.isAndroid) {
       // Android 12以上
       final status = await Permission.scheduleExactAlarm.status;
-      print('正確なアラーム権限: $status');
+      Logger.log('正確なアラーム権限: $status');
       return status.isGranted;
     }
     return true;
@@ -656,7 +657,7 @@ await _notifications.zonedSchedule(
       
       if (status.isDenied || status.isPermanentlyDenied) {
         // 設定画面を開く
-        print('設定画面を開きます');
+        Logger.log('設定画面を開きます');
         await openAppSettings();
         return false;
       }
@@ -682,31 +683,31 @@ await _notifications.zonedSchedule(
 
   // スケジュール済み通知の一覧を取得（デバッグ用）
   static Future<void> printPendingNotifications() async {
-    print('=== スケジュール済み通知一覧 ===');
+    Logger.section(' スケジュール済み通知一覧 ');
     
     final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
         notifications.AndroidFlutterLocalNotificationsPlugin>();
     
     if (androidPlugin == null) {
-      print('❌ AndroidPlugin が取得できません');
+      Logger.error(' AndroidPlugin が取得できません');
       return;
     }
     
     final pendingNotifications = await _notifications.pendingNotificationRequests();
     
     if (pendingNotifications.isEmpty) {
-      print('📭 スケジュール済み通知はありません');
+      Logger.log('📭 スケジュール済み通知はありません');
     } else {
-      print('📬 スケジュール済み通知: ${pendingNotifications.length}件');
+      Logger.log('📬 スケジュール済み通知: ${pendingNotifications.length}件');
       for (var notification in pendingNotifications) {
-        print('   ID: ${notification.id}');
-        print('   タイトル: ${notification.title}');
-        print('   本文: ${notification.body}');
-        print('   payload: ${notification.payload}');
-        print('   ---');
+        Logger.log('   ID: ${notification.id}');
+        Logger.log('   タイトル: ${notification.title}');
+        Logger.log('   本文: ${notification.body}');
+        Logger.log('   payload: ${notification.payload}');
+        Logger.log('   ---');
       }
     }
     
-    print('=== 通知一覧終了 ===\n');
+    Logger.sectionEnd(' 通知一覧');
   }
 }

@@ -4,6 +4,7 @@ import '../models/label.dart';
 import '../services/label_service.dart';
 import '../screens/task_detail_screen.dart';
 import 'label_chip.dart';
+import 'package:task_manager_app/utils/logger.dart';
 
 class TaskCard extends StatelessWidget {
   final Task task;
@@ -163,12 +164,12 @@ class TaskCard extends StatelessWidget {
 
     return GestureDetector(
       onLongPress: () async {
-        print('🔵🔵🔵 タスクカード長押し 🔵🔵🔵');
-        print('タスクID: ${task.id}');
-        print('タスク名: ${task.title}');
-        print('currentColumn: $currentColumn');
-        print('onMoveToDone is null: ${onMoveToDone == null}');
-        print('onTaskUpdated is null: ${onTaskUpdated == null}');
+        Logger.log('🔵🔵🔵 タスクカード長押し 🔵🔵🔵');
+        Logger.log('タスクID: ${task.id}');
+        Logger.log('タスク名: ${task.title}');
+        Logger.log('currentColumn: $currentColumn');
+        Logger.log('onMoveToDone is null: ${onMoveToDone == null}');
+        Logger.log('onTaskUpdated is null: ${onTaskUpdated == null}');
         
         await Navigator.push(
           context,
@@ -178,35 +179,35 @@ class TaskCard extends StatelessWidget {
               currentColumn: currentColumn,
               availableLabels: availableLabels, // ラベルを渡す
               onTaskUpdated: (updatedTask) {
-                print('🔄 TaskCard: onTaskUpdated が呼ばれました');
-                print('更新後タスクID: ${updatedTask.id}');
-                print('更新後タスク名: ${updatedTask.title}');
+                Logger.log('🔄 TaskCard: onTaskUpdated が呼ばれました');
+                Logger.log('更新後タスクID: ${updatedTask.id}');
+                Logger.log('更新後タスク名: ${updatedTask.title}');
                 
                 if (onTaskUpdated != null) {
-                  print('widget.onTaskUpdated を呼び出します');
+                  Logger.log('widget.onTaskUpdated を呼び出します');
                   onTaskUpdated!(updatedTask);
-                  print('✅ widget.onTaskUpdated 呼び出し完了');
+                  Logger.success(' widget.onTaskUpdated 呼び出し完了');
                 } else {
-                  print('❌ エラー: widget.onTaskUpdated が null です');
+                  Logger.error(' エラー: widget.onTaskUpdated が null です');
                 }
               },
               onComplete: currentColumn != '完了' ? () {
-                print('✅ TaskCard: onComplete が呼ばれました');
-                print('currentColumn: $currentColumn');
+                Logger.success(' TaskCard: onComplete が呼ばれました');
+                Logger.log('currentColumn: $currentColumn');
                 
                 if (onMoveToDone != null) {
-                  print('widget.onMoveToDone を呼び出します');
+                  Logger.log('widget.onMoveToDone を呼び出します');
                   onMoveToDone!();
-                  print('✅ widget.onMoveToDone 呼び出し完了');
+                  Logger.success(' widget.onMoveToDone 呼び出し完了');
                 } else {
-                  print('❌ エラー: widget.onMoveToDone が null です');
+                  Logger.error(' エラー: widget.onMoveToDone が null です');
                 }
               } : null,
             ),
           ),
         );
         
-        print('🔵🔵🔵 タスクカード長押し終了 🔵🔵🔵\n');
+        Logger.log('🔵🔵🔵 タスクカード長押し終了 🔵🔵🔵\n');
       },
       child: Card(
         color: cardColor,

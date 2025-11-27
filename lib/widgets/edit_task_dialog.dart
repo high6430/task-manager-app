@@ -4,6 +4,7 @@ import '../models/label.dart';
 import '../models/notification_set.dart';
 import '../models/notification_timing.dart';
 import '../services/notification_set_service.dart';
+import 'package:task_manager_app/utils/logger.dart';
 
 class EditTaskDialog extends StatefulWidget {
   final Task task;
@@ -91,7 +92,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
   }
 
   void _updateTask() {
-    print('🔧 _updateTask が呼ばれました');
+    Logger.log('🔧 _updateTask が呼ばれました');
     
     if (titleController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -120,12 +121,12 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
       notificationEnabled: notificationEnabled,
     );
 
-    print('更新タスク作成完了: ${updatedTask.title}');
-    print('widget.onTaskUpdated を呼び出します');
+    Logger.log('更新タスク作成完了: ${updatedTask.title}');
+    Logger.log('widget.onTaskUpdated を呼び出します');
     
     widget.onTaskUpdated(updatedTask);
     
-    print('✅ widget.onTaskUpdated 呼び出し完了');
+    Logger.success(' widget.onTaskUpdated 呼び出し完了');
     // Navigator.pop(context)はTaskDetailScreenで呼ぶ
   }
 
