@@ -13,7 +13,7 @@ import 'settings_screen.dart';
 import 'dart:io';
 import 'dart:async';
 import 'task_detail_screen.dart';
-import 'package:task_manager_app/utils/logger.dart';
+import 'package:pikado/utils/logger.dart';
 
 class TaskBoardScreen extends StatefulWidget {
   @override

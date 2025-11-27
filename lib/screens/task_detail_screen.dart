@@ -6,7 +6,7 @@ import '../models/notification_timing.dart';
 import '../services/notification_set_service.dart';
 import '../widgets/label_chip.dart';
 import '../widgets/edit_task_dialog.dart';
-import 'package:task_manager_app/utils/logger.dart';
+import 'package:pikado/utils/logger.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   final Task task;

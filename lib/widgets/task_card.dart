@@ -4,7 +4,7 @@ import '../models/label.dart';
 import '../services/label_service.dart';
 import '../screens/task_detail_screen.dart';
 import 'label_chip.dart';
-import 'package:task_manager_app/utils/logger.dart';
+import 'package:pikado/utils/logger.dart';
 
 class TaskCard extends StatelessWidget {
   final Task task;

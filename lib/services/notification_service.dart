@@ -8,7 +8,7 @@ import '../models/notification_timing.dart';
 import '../services/notification_set_service.dart';
 import '../services/app_settings_service.dart';
 import 'dart:async';
-import 'package:task_manager_app/utils/logger.dart';
+import 'package:pikado/utils/logger.dart';
 
 
 class NotificationService {

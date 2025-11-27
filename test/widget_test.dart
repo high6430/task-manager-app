@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:task_manager_app/main.dart';
+import 'package:pikado/main.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -12,7 +12,7 @@ void main() {
 
   testWidgets('タスク追加が表示される簡易テスト', (WidgetTester tester) async {
     // アプリ起動
-    await tester.pumpWidget(TaskManagerApp());
+    await tester.pumpWidget(pikado());
     await tester.pumpAndSettle();
 
     // FAB をタップして追加ダイアログを表示

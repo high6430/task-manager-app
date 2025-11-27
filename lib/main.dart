@@ -3,7 +3,7 @@ import 'screens/task_board_screen.dart';
 import 'services/notification_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
-import 'package:task_manager_app/utils/logger.dart';
+import 'package:pikado/utils/logger.dart';
 
 
 void main() async {
@@ -41,10 +41,10 @@ void main() async {
   
   Logger.sectionEnd(' 初期化完了 ');
   
-  runApp(TaskManagerApp());
+  runApp(pikado());
 }
 
-class TaskManagerApp extends StatelessWidget {
+class pikado extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
