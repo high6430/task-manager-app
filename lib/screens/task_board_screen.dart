@@ -3,35 +3,88 @@ import '../models/task.dart';
 import '../models/label.dart';
 import '../services/task_service.dart';
 import '../services/label_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/task_card.dart';
 import '../widgets/add_task_dialog.dart';
 import '../widgets/edit_task_dialog.dart';
 import 'label_settings_screen.dart';
+import 'notification_set_settings_screen.dart';
+import 'settings_screen.dart';
+import 'dart:io';
+import 'dart:async';
+import 'task_detail_screen.dart';
 
 class TaskBoardScreen extends StatefulWidget {
   @override
   _TaskBoardScreenState createState() => _TaskBoardScreenState();
 }
 
-class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProviderStateMixin {
+class _TaskBoardScreenState extends State<TaskBoardScreen>
+    with SingleTickerProviderStateMixin {
   List<Task> todoTasks = [];
   List<Task> doingTasks = [];
   List<Task> doneTasks = [];
   List<Label> availableLabels = [];
-  String? selectedLabelId; // null = すべて表示
-  
+  String? selectedLabelId;
+
   late TabController _tabController;
+
+  // 通知イベント購読用
+  StreamSubscription<String>? _taskCompleteSubscription;
+  StreamSubscription<String>? _taskDetailsSubscription;
+
+  // フィルタリング済みタスクをキャッシュ
+  List<Task> _filteredTodoTasks = [];
+  List<Task> _filteredDoingTasks = [];
+  List<Task> _filteredDoneTasks = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+
+    // 通知イベントの購読を最初に設定
+    print('=== Stream購読開始 ===');
+
+    // 通知からのタスク完了イベントを購読
+    _taskCompleteSubscription = NotificationService.taskCompleteStream.listen(
+      (taskId) {
+        print('📬 タスク完了イベント受信: $taskId');
+        _completeTaskFromNotification(taskId);
+      },
+      onError: (error) {
+        print('❌ タスク完了イベントエラー: $error');
+      },
+    );
+
+    // 通知からのタスク詳細表示イベントを購読
+    _taskDetailsSubscription = NotificationService.taskDetailsStream.listen(
+      (taskId) {
+        print('📬 タスク詳細表示イベント受信: $taskId');
+        _showTaskDetailsFromNotification(taskId);
+      },
+      onError: (error) {
+        print('❌ タスク詳細表示イベントエラー: $error');
+      },
+    );
+
+    print('✅ Stream購読完了');
+    print('=== Stream購読終了 ===\n');
+
+    // データ読み込み
     _loadData();
+
+    // 権限チェック（少し遅延させて表示）
+    Future.delayed(Duration(milliseconds: 800), () {
+      _checkPermissions();
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _taskCompleteSubscription?.cancel();
+    _taskDetailsSubscription?.cancel();
     super.dispose();
   }
 
@@ -46,6 +99,7 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
       todoTasks = tasks['todo']!;
       doingTasks = tasks['doing']!;
       doneTasks = tasks['done']!;
+      _updateFilteredTasks();
     });
   }
 
@@ -64,16 +118,46 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
     );
   }
 
+  // フィルタリング済みタスクを更新（キャッシュ）
+  void _updateFilteredTasks() {
+    _filteredTodoTasks = _filterAndSortTasks(todoTasks);
+    _filteredDoingTasks = _filterAndSortTasks(doingTasks);
+    _filteredDoneTasks = _filterAndSortTasks(doneTasks);
+  }
+
+  // タスクをフィルタリング＆ソート
+  List<Task> _filterAndSortTasks(List<Task> tasks) {
+    List<Task> filtered;
+    if (selectedLabelId == null) {
+      filtered = List.from(tasks);
+    } else {
+      filtered = tasks
+          .where((task) => task.labelIds.contains(selectedLabelId))
+          .toList();
+    }
+    filtered.sort((a, b) => a.deadline.compareTo(b.deadline));
+    return filtered;
+  }
+
   void _addTaskDialog() {
     showDialog(
       context: context,
       builder: (context) => AddTaskDialog(
-        onTaskAdded: (task) {
+        availableLabels: availableLabels,
+        onTaskAdded: (task) async {
           setState(() {
             todoTasks.add(task);
-            todoTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
-            _saveTasks();
+            _updateFilteredTasks();
           });
+          await _saveTasks();
+
+          // 通知をスケジュール
+          final taskId = task.id;
+          await NotificationService.scheduleTaskNotifications(
+            task,
+            taskId,
+            '未対応',
+          );
         },
       ),
     );
@@ -97,7 +181,7 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
               foregroundColor: Colors.white,
             ),
             child: Text('削除'),
-            onPressed: () {
+            onPressed: () async {
               setState(() {
                 if (columnName == '未対応') {
                   todoTasks.remove(task);
@@ -106,9 +190,17 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
                 } else if (columnName == '完了') {
                   doneTasks.remove(task);
                 }
-                _saveTasks();
+                _updateFilteredTasks();
               });
-              Navigator.pop(context);
+              await _saveTasks();
+
+              // 通知をキャンセル
+              final taskId = task.id;
+              await NotificationService.cancelTaskNotifications(taskId);
+
+              if (mounted) {
+                Navigator.pop(context);
+              }
             },
           ),
         ],
@@ -121,7 +213,8 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
       context: context,
       builder: (context) => EditTaskDialog(
         task: oldTask,
-        onTaskUpdated: (newTask) {
+        availableLabels: availableLabels,
+        onTaskUpdated: (newTask) async {
           setState(() {
             List<Task> targetList;
             if (columnName == '未対応') {
@@ -131,30 +224,28 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
             } else {
               targetList = doneTasks;
             }
-            
+
             final index = targetList.indexOf(oldTask);
             if (index != -1) {
               targetList[index] = newTask;
-              targetList.sort((a, b) => a.deadline.compareTo(b.deadline));
             }
-            _saveTasks();
+            _updateFilteredTasks();
           });
+          await _saveTasks();
+
+          // 通知を再スケジュール
+          final taskId = newTask.id;
+          await NotificationService.scheduleTaskNotifications(
+            newTask,
+            taskId,
+            columnName,
+          );
         },
       ),
     );
   }
 
-  List<Task> _filterTasks(List<Task> tasks) {
-    if (selectedLabelId == null) {
-      return tasks; // すべて表示
-    }
-    return tasks.where((task) => task.labelIds.contains(selectedLabelId)).toList();
-  }
-
-  Widget _buildTaskList(List<Task> tasks, String columnName) {
-    final filteredTasks = _filterTasks(tasks);
-    filteredTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
-
+  Widget _buildTaskList(List<Task> filteredTasks, String columnName) {
     if (filteredTasks.isEmpty) {
       return Center(
         child: Text(
@@ -170,26 +261,78 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
       itemBuilder: (context, index) {
         final task = filteredTasks[index];
         return TaskCard(
+          key: ValueKey(task.id),
           task: task,
           currentColumn: columnName,
+          availableLabels: availableLabels,
           onDelete: () {
             _showDeleteConfirmDialog(task, columnName);
           },
           onEdit: () {
             _editTask(task, columnName);
           },
+          onTaskUpdated: (updatedTask) async {
+            print('🔄 TaskBoardScreen: onTaskUpdated が呼ばれました');
+            print('更新タスクID: ${updatedTask.id}');
+            print('カラム: $columnName');
+
+            setState(() {
+              List<Task> targetList;
+              if (columnName == '未対応') {
+                targetList = todoTasks;
+              } else if (columnName == '進行中') {
+                targetList = doingTasks;
+              } else {
+                targetList = doneTasks;
+              }
+
+              final index = targetList.indexWhere(
+                (t) => t.id == updatedTask.id,
+              );
+              if (index != -1) {
+                targetList[index] = updatedTask;
+                print('✅ タスクを更新しました');
+              } else {
+                print('❌ エラー: タスクが見つかりませんでした（index: $index）');
+              }
+              _updateFilteredTasks();
+            });
+
+            print('タスクを保存します');
+            await _saveTasks();
+            print('✅ タスク保存完了');
+
+            // 通知を再スケジュール
+            print('通知を再スケジュールします');
+            await NotificationService.scheduleTaskNotifications(
+              updatedTask,
+              updatedTask.id,
+              columnName,
+            );
+            print('✅ 通知再スケジュール完了');
+
+            print('✅ TaskBoardScreen: onTaskUpdated 完了\n');
+          },
           onMoveToTodo: columnName == '進行中'
-              ? () {
+              ? () async {
                   setState(() {
                     doingTasks.remove(task);
                     todoTasks.add(task);
-                    todoTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
-                    _saveTasks();
+                    _updateFilteredTasks();
                   });
+                  await _saveTasks();
+
+                  // 通知を再スケジュール
+                  final taskId = task.id;
+                  await NotificationService.scheduleTaskNotifications(
+                    task,
+                    taskId,
+                    '未対応',
+                  );
                 }
               : null,
           onMoveToDoing: (columnName == '未対応' || columnName == '完了')
-              ? () {
+              ? () async {
                   setState(() {
                     if (columnName == '未対応') {
                       todoTasks.remove(task);
@@ -197,19 +340,51 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
                       doneTasks.remove(task);
                     }
                     doingTasks.add(task);
-                    doingTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
-                    _saveTasks();
+                    _updateFilteredTasks();
                   });
+                  await _saveTasks();
+
+                  // 通知を再スケジュール
+                  final taskId = task.id;
+                  await NotificationService.scheduleTaskNotifications(
+                    task,
+                    taskId,
+                    '進行中',
+                  );
                 }
               : null,
-          onMoveToDone: columnName == '進行中'
-              ? () {
+          onMoveToDone: (columnName == '進行中' || columnName == '未対応')
+              ? () async {
+                  print('🟢 onMoveToDone が呼ばれました');
+                  print('カラム: $columnName');
+                  print('タスクID: ${task.id}');
+
                   setState(() {
-                    doingTasks.remove(task);
+                    if (columnName == '未対応') {
+                      todoTasks.remove(task);
+                      print('未対応リストから削除');
+                    } else if (columnName == '進行中') {
+                      doingTasks.remove(task);
+                      print('進行中リストから削除');
+                    }
                     doneTasks.add(task);
-                    doneTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
-                    _saveTasks();
+                    _updateFilteredTasks();
+                    print('完了リストに追加');
                   });
+
+                  await _saveTasks();
+                  print('✅ タスク保存完了');
+
+                  // 完了時は通知をキャンセル
+                  final taskId = task.id;
+                  await NotificationService.cancelTaskNotifications(taskId);
+                  print('✅ 通知キャンセル完了');
+
+                  // 完了タブに切り替え
+                  _tabController.animateTo(2);
+                  print('完了タブに切り替え');
+
+                  print('🟢 onMoveToDone 完了\n');
                 }
               : null,
         );
@@ -217,8 +392,369 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
     );
   }
 
-  int _getFilteredTaskCount(List<Task> tasks) {
-    return _filterTasks(tasks).length;
+  int _getFilteredTaskCount(List<Task> filteredTasks) {
+    return filteredTasks.length;
+  }
+
+  // 権限チェック
+  Future<void> _checkPermissions() async {
+    if (!Platform.isAndroid) return;
+
+    final permissions = await NotificationService.checkAllPermissions();
+
+    final notificationGranted = permissions['notification'] ?? false;
+    final alarmGranted = permissions['exactAlarm'] ?? false;
+
+    print('通知権限: $notificationGranted');
+    print('アラーム権限: $alarmGranted');
+
+    // どちらかが許可されていない場合、ダイアログ表示
+    if (!notificationGranted || !alarmGranted) {
+      _showPermissionDialog(notificationGranted, alarmGranted);
+    }
+  }
+
+  // 権限ダイアログを表示
+  void _showPermissionDialog(bool notificationGranted, bool alarmGranted) {
+    String message = '';
+
+    if (!notificationGranted && !alarmGranted) {
+      message =
+          '通知を受け取るには、以下の2つの権限が必要です：\n\n'
+          '1. 通知の許可\n'
+          '2. アラームとリマインダーの許可\n\n'
+          '設定画面で両方をONにしてください。';
+    } else if (!notificationGranted) {
+      message =
+          '通知を受け取るには「通知の許可」が必要です。\n\n'
+          '設定画面でONにしてください。';
+    } else if (!alarmGranted) {
+      message =
+          '通知を正確な時刻に届けるには\n'
+          '「アラームとリマインダー」の権限が必要です。\n\n'
+          '設定画面でONにしてください。';
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 8),
+            Text('重要な設定'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: Text('後で'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await NotificationService.requestExactAlarmPermission();
+
+              // 再チェック（設定画面から戻ってきた後）
+              Future.delayed(Duration(seconds: 1), () {
+                _checkPermissions();
+              });
+            },
+            child: Text('設定画面を開く'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 通知からタスクを完了にする
+  Future<void> _completeTaskFromNotification(String taskId) async {
+    print('--- 通知からタスク完了処理開始 ---');
+    print('タスクID: $taskId');
+
+    Task? targetTask;
+    String? columnName;
+
+    // 全てのリストからタスクを検索
+    for (var task in todoTasks) {
+      if (task.id == taskId) {
+        targetTask = task;
+        columnName = '未対応';
+        break;
+      }
+    }
+
+    if (targetTask == null) {
+      for (var task in doingTasks) {
+        if (task.id == taskId) {
+          targetTask = task;
+          columnName = '進行中';
+          break;
+        }
+      }
+    }
+
+    if (targetTask == null) {
+      for (var task in doneTasks) {
+        if (task.id == taskId) {
+          print('⚠️ タスクは既に完了済みです');
+          print('--- 通知からタスク完了処理終了 ---\n');
+          return;
+        }
+      }
+    }
+
+    if (targetTask == null) {
+      print('❌ タスクが見つかりませんでした');
+      print('--- 通知からタスク完了処理終了 ---\n');
+      return;
+    }
+
+    print('✅ タスクを発見: ${targetTask.title}');
+    print('現在のカラム: $columnName');
+    
+    // 確認ダイアログを表示
+    if (mounted) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('タスク完了確認'),
+          content: Text('「${targetTask!.title}」\n\nこのタスクを完了にしますか？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('キャンセル'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('完了にする'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) {
+        print('⚠️ ユーザーがキャンセルしました');
+        print('--- 通知からタスク完了処理終了 ---\n');
+        return;
+      }
+    }
+
+    // タスクを完了リストに移動
+    setState(() {
+      if (columnName == '未対応') {
+        todoTasks.remove(targetTask);
+      } else if (columnName == '進行中') {
+        doingTasks.remove(targetTask);
+      }
+      doneTasks.add(targetTask!);
+      _updateFilteredTasks();
+    });
+
+    await _saveTasks();
+
+    // 通知をキャンセル
+    await NotificationService.cancelTaskNotifications(taskId);
+    
+    // 完了タブに切り替え
+    _tabController.animateTo(2);
+
+    print('✅ タスクを完了にしました');
+    print('--- 通知からタスク完了処理終了 ---\n');
+
+    // スナックバーで通知
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('「${targetTask.title}」を完了にしました'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  // 通知からタスク詳細を表示
+  Future<void> _showTaskDetailsFromNotification(String taskId) async {
+    print('--- 通知からタスク詳細表示処理開始 ---');
+    print('タスクID: $taskId');
+
+    Task? targetTask;
+    String? columnName;
+
+    // 全てのリストからタスクを検索
+    for (var task in todoTasks) {
+      if (task.id == taskId) {
+        targetTask = task;
+        columnName = '未対応';
+        break;
+      }
+    }
+
+    if (targetTask == null) {
+      for (var task in doingTasks) {
+        if (task.id == taskId) {
+          targetTask = task;
+          columnName = '進行中';
+          break;
+        }
+      }
+    }
+
+    if (targetTask == null) {
+      for (var task in doneTasks) {
+        if (task.id == taskId) {
+          targetTask = task;
+          columnName = '完了';
+          break;
+        }
+      }
+    }
+
+    if (targetTask == null) {
+      print('❌ タスクが見つかりませんでした');
+      print('--- 通知からタスク詳細表示処理終了 ---\n');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('タスクが見つかりませんでした')),
+        );
+      }
+      return;
+    }
+
+    print('✅ タスクを発見: ${targetTask.title}');
+    print('現在のカラム: $columnName');
+
+    // 適切なタブに切り替え
+    if (columnName == '未対応') {
+      _tabController.animateTo(0);
+    } else if (columnName == '進行中') {
+      _tabController.animateTo(1);
+    } else if (columnName == '完了') {
+      _tabController.animateTo(2);
+    }
+
+    print('--- 通知からタスク詳細表示処理終了 ---\n');
+
+    // タスク詳細画面に遷移
+    if (mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TaskDetailScreen(
+            task: targetTask!,
+            currentColumn: columnName!,
+            availableLabels: availableLabels,
+            onTaskUpdated: (updatedTask) async {
+              print('🔄🔄🔄 タスク更新処理開始（通知から） 🔄🔄🔄');
+              print('更新タスクID: ${updatedTask.id}');
+              print('更新タスク名: ${updatedTask.title}');
+              print('現在のカラム: $columnName');
+
+              // タスク更新処理
+              setState(() {
+                List<Task> targetList;
+                if (columnName == '未対応') {
+                  targetList = todoTasks;
+                } else if (columnName == '進行中') {
+                  targetList = doingTasks;
+                } else {
+                  targetList = doneTasks;
+                }
+
+                print('対象リストのタスク数: ${targetList.length}');
+
+                final index = targetList.indexWhere(
+                  (t) => t.id == updatedTask.id,
+                );
+                print('タスクのインデックス: $index');
+
+                if (index != -1) {
+                  print('タスクを更新します');
+                  targetList[index] = updatedTask;
+                  print('✅ タスクを更新しました: ${updatedTask.title}');
+                } else {
+                  print('❌ エラー: タスクが見つかりませんでした');
+                  print('検索対象リスト:');
+                  for (var t in targetList) {
+                    print('  - ID: ${t.id}, タイトル: ${t.title}');
+                  }
+                }
+                _updateFilteredTasks();
+              });
+
+              print('タスクを保存します');
+              await _saveTasks();
+              print('✅ タスク保存完了');
+
+              // 通知を再スケジュール
+              print('通知を再スケジュールします');
+              await NotificationService.scheduleTaskNotifications(
+                updatedTask,
+                updatedTask.id,
+                columnName!,
+              );
+              print('✅ 通知再スケジュール完了');
+              print('🔄🔄🔄 タスク更新処理完了（通知から） 🔄🔄🔄\n');
+            },
+            onComplete: columnName != '完了'
+                ? () async {
+                    print('--- 完了処理開始（詳細画面から・通知経由） ---');
+                    print('タスクID: $taskId');
+
+                    // タスクを完了にする処理
+                    setState(() {
+                      if (columnName == '未対応') {
+                        todoTasks.remove(targetTask);
+                        print('未対応リストから削除');
+                      } else if (columnName == '進行中') {
+                        doingTasks.remove(targetTask);
+                        print('進行中リストから削除');
+                      }
+                      doneTasks.add(targetTask!);
+                      _updateFilteredTasks();
+                      print('完了リストに追加');
+                    });
+
+                    await _saveTasks();
+                    print('✅ タスク保存完了');
+
+                    // 通知をキャンセル
+                    await NotificationService.cancelTaskNotifications(taskId);
+                    print('✅ 通知キャンセル完了');
+
+                    // 完了タブに切り替え
+                    _tabController.animateTo(2);
+                    print('完了タブに切り替え');
+
+                    print('✅ タスクを完了にしました');
+                    print('--- 完了処理終了（詳細画面から・通知経由） ---\n');
+
+                    // スナックバーで通知
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('「${targetTask!.title}」を完了にしました'),
+                          duration: Duration(seconds: 2),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  }
+                : null,
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -235,8 +771,29 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
                 context,
                 MaterialPageRoute(builder: (context) => LabelSettingsScreen()),
               );
-              // ラベル管理画面から戻ってきたらラベルを再読み込み
               _loadLabels();
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.notifications),
+            tooltip: '通知セット管理',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => NotificationSetSettingsScreen(),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.settings),
+            tooltip: '設定',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SettingsScreen()),
+              );
             },
           ),
         ],
@@ -244,14 +801,16 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
           preferredSize: Size.fromHeight(96),
           child: Column(
             children: [
-              // フィルタドロップダウン
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   children: [
                     Text(
                       'フィルタ: ',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     SizedBox(width: 8),
                     Expanded(
@@ -281,11 +840,12 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
                                 ],
                               ),
                             );
-                          }).toList(),
+                          }),
                         ],
                         onChanged: (String? newValue) {
                           setState(() {
                             selectedLabelId = newValue;
+                            _updateFilteredTasks();
                           });
                         },
                       ),
@@ -293,13 +853,12 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
                   ],
                 ),
               ),
-              // タブバー
               TabBar(
                 controller: _tabController,
                 tabs: [
-                  Tab(text: '未対応 (${_getFilteredTaskCount(todoTasks)})'),
-                  Tab(text: '進行中 (${_getFilteredTaskCount(doingTasks)})'),
-                  Tab(text: '完了 (${_getFilteredTaskCount(doneTasks)})'),
+                  Tab(text: '未対応 (${_getFilteredTaskCount(_filteredTodoTasks)})'),
+                  Tab(text: '進行中 (${_getFilteredTaskCount(_filteredDoingTasks)})'),
+                  Tab(text: '完了 (${_getFilteredTaskCount(_filteredDoneTasks)})'),
                 ],
               ),
             ],
@@ -309,9 +868,9 @@ class _TaskBoardScreenState extends State<TaskBoardScreen> with SingleTickerProv
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildTaskList(todoTasks, '未対応'),
-          _buildTaskList(doingTasks, '進行中'),
-          _buildTaskList(doneTasks, '完了'),
+          _buildTaskList(_filteredTodoTasks, '未対応'),
+          _buildTaskList(_filteredDoingTasks, '進行中'),
+          _buildTaskList(_filteredDoneTasks, '完了'),
         ],
       ),
       floatingActionButton: FloatingActionButton(

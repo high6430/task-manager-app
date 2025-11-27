@@ -2,47 +2,32 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../models/label.dart';
 import '../services/label_service.dart';
+import '../screens/task_detail_screen.dart';
 import 'label_chip.dart';
 
-class TaskCard extends StatefulWidget {
+class TaskCard extends StatelessWidget {
   final Task task;
   final String currentColumn;
+  final List<Label> availableLabels; // 外部から受け取る
   final VoidCallback onDelete;
   final VoidCallback? onEdit;
   final VoidCallback? onMoveToTodo;
   final VoidCallback? onMoveToDoing;
   final VoidCallback? onMoveToDone;
+  final Function(Task)? onTaskUpdated;
 
   const TaskCard({
     Key? key,
     required this.task,
     required this.currentColumn,
+    required this.availableLabels, // 追加
     required this.onDelete,
     this.onEdit,
     this.onMoveToTodo,
     this.onMoveToDoing,
     this.onMoveToDone,
+    this.onTaskUpdated,
   }) : super(key: key);
-
-  @override
-  _TaskCardState createState() => _TaskCardState();
-}
-
-class _TaskCardState extends State<TaskCard> {
-  List<Label> availableLabels = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadLabels();
-  }
-
-  Future<void> _loadLabels() async {
-    final labels = await LabelService.loadLabels();
-    setState(() {
-      availableLabels = labels;
-    });
-  }
 
   Color _getDeadlineColor(DateTime deadline) {
     final now = DateTime.now();
@@ -77,7 +62,7 @@ class _TaskCardState extends State<TaskCard> {
   }
 
   List<Label> _getTaskLabels() {
-    return widget.task.labelIds
+    return task.labelIds
         .map((id) => LabelService.getLabelById(availableLabels, id))
         .where((label) => label != null)
         .cast<Label>()
@@ -86,15 +71,15 @@ class _TaskCardState extends State<TaskCard> {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = _getDeadlineColor(widget.task.deadline);
+    final cardColor = _getDeadlineColor(task.deadline);
     final textColor = _getTextColor(cardColor);
     final taskLabels = _getTaskLabels();
 
     List<Widget> actionButtons = [];
 
     // 移動ボタン
-    if (widget.currentColumn == '未対応') {
-      if (widget.onMoveToDoing != null) {
+    if (currentColumn == '未対応') {
+      if (onMoveToDoing != null) {
         actionButtons.add(
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -102,12 +87,12 @@ class _TaskCardState extends State<TaskCard> {
               minimumSize: Size(100, 40),
             ),
             child: Text('進行中へ', style: TextStyle(fontSize: 14)),
-            onPressed: widget.onMoveToDoing,
+            onPressed: onMoveToDoing,
           ),
         );
       }
-    } else if (widget.currentColumn == '進行中') {
-      if (widget.onMoveToTodo != null) {
+    } else if (currentColumn == '進行中') {
+      if (onMoveToTodo != null) {
         actionButtons.add(
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -115,11 +100,11 @@ class _TaskCardState extends State<TaskCard> {
               minimumSize: Size(100, 40),
             ),
             child: Text('未対応へ', style: TextStyle(fontSize: 14)),
-            onPressed: widget.onMoveToTodo,
+            onPressed: onMoveToTodo,
           ),
         );
       }
-      if (widget.onMoveToDone != null) {
+      if (onMoveToDone != null) {
         actionButtons.add(
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -127,12 +112,12 @@ class _TaskCardState extends State<TaskCard> {
               minimumSize: Size(100, 40),
             ),
             child: Text('完了へ', style: TextStyle(fontSize: 14)),
-            onPressed: widget.onMoveToDone,
+            onPressed: onMoveToDone,
           ),
         );
       }
-    } else if (widget.currentColumn == '完了') {
-      if (widget.onMoveToDoing != null) {
+    } else if (currentColumn == '完了') {
+      if (onMoveToDoing != null) {
         actionButtons.add(
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -140,14 +125,14 @@ class _TaskCardState extends State<TaskCard> {
               minimumSize: Size(100, 40),
             ),
             child: Text('進行中へ', style: TextStyle(fontSize: 14)),
-            onPressed: widget.onMoveToDoing,
+            onPressed: onMoveToDoing,
           ),
         );
       }
     }
 
     // 編集ボタン
-    if (widget.onEdit != null) {
+    if (onEdit != null) {
       actionButtons.add(
         ElevatedButton(
           style: ElevatedButton.styleFrom(
@@ -157,12 +142,12 @@ class _TaskCardState extends State<TaskCard> {
             minimumSize: Size(100, 40),
           ),
           child: Text('編集', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-          onPressed: widget.onEdit,
+          onPressed: onEdit,
         ),
       );
     }
 
-    // 削除ボタン（小さいまま）
+    // 削除ボタン
     actionButtons.add(
       ElevatedButton(
         style: ElevatedButton.styleFrom(
@@ -172,67 +157,115 @@ class _TaskCardState extends State<TaskCard> {
           minimumSize: Size(0, 40),
         ),
         child: Text('削除', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-        onPressed: widget.onDelete,
+        onPressed: onDelete,
       ),
     );
 
-    return Card(
-      color: cardColor,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.task.title,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
-                    overflow: TextOverflow.visible,
-                    softWrap: true,
-                  ),
-                ),
-                SizedBox(width: 8),
-                Icon(Icons.circle, color: _priorityColor(widget.task.priority), size: 14),
-              ],
+    return GestureDetector(
+      onLongPress: () async {
+        print('🔵🔵🔵 タスクカード長押し 🔵🔵🔵');
+        print('タスクID: ${task.id}');
+        print('タスク名: ${task.title}');
+        print('currentColumn: $currentColumn');
+        print('onMoveToDone is null: ${onMoveToDone == null}');
+        print('onTaskUpdated is null: ${onTaskUpdated == null}');
+        
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TaskDetailScreen(
+              task: task,
+              currentColumn: currentColumn,
+              availableLabels: availableLabels, // ラベルを渡す
+              onTaskUpdated: (updatedTask) {
+                print('🔄 TaskCard: onTaskUpdated が呼ばれました');
+                print('更新後タスクID: ${updatedTask.id}');
+                print('更新後タスク名: ${updatedTask.title}');
+                
+                if (onTaskUpdated != null) {
+                  print('widget.onTaskUpdated を呼び出します');
+                  onTaskUpdated!(updatedTask);
+                  print('✅ widget.onTaskUpdated 呼び出し完了');
+                } else {
+                  print('❌ エラー: widget.onTaskUpdated が null です');
+                }
+              },
+              onComplete: currentColumn != '完了' ? () {
+                print('✅ TaskCard: onComplete が呼ばれました');
+                print('currentColumn: $currentColumn');
+                
+                if (onMoveToDone != null) {
+                  print('widget.onMoveToDone を呼び出します');
+                  onMoveToDone!();
+                  print('✅ widget.onMoveToDone 呼び出し完了');
+                } else {
+                  print('❌ エラー: widget.onMoveToDone が null です');
+                }
+              } : null,
             ),
-            if (taskLabels.isNotEmpty) ...[
+          ),
+        );
+        
+        print('🔵🔵🔵 タスクカード長押し終了 🔵🔵🔵\n');
+      },
+      child: Card(
+        color: cardColor,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      task.title,
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+                      overflow: TextOverflow.visible,
+                      softWrap: true,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Icon(Icons.circle, color: _priorityColor(task.priority), size: 14),
+                ],
+              ),
+              if (taskLabels.isNotEmpty) ...[
+                SizedBox(height: 8),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: taskLabels.map((label) => LabelChip(label: label, small: true)).toList(),
+                ),
+              ],
+              if (task.description.isNotEmpty) ...[
+                SizedBox(height: 8),
+                Text(
+                  '詳細:',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  task.description,
+                  style: TextStyle(fontSize: 12, color: textColor),
+                  overflow: TextOverflow.visible,
+                  softWrap: true,
+                ),
+              ],
+              SizedBox(height: 4),
+              Text(
+                '締め切り: ${task.deadline.year}/${task.deadline.month}/${task.deadline.day} '
+                '${task.deadline.hour.toString().padLeft(2, '0')}:${task.deadline.minute.toString().padLeft(2, '0')}',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor),
+              ),
               SizedBox(height: 8),
               Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                children: taskLabels.map((label) => LabelChip(label: label, small: true)).toList(),
+                spacing: 4.0,
+                runSpacing: 4.0,
+                children: actionButtons,
               ),
             ],
-            if (widget.task.description.isNotEmpty) ...[
-              SizedBox(height: 8),
-              Text(
-                '詳細:',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
-              ),
-              SizedBox(height: 2),
-              Text(
-                widget.task.description,
-                style: TextStyle(fontSize: 12, color: textColor),
-                overflow: TextOverflow.visible,
-                softWrap: true,
-              ),
-            ],
-            SizedBox(height: 4),
-            Text(
-              '締め切り: ${widget.task.deadline.year}/${widget.task.deadline.month}/${widget.task.deadline.day} '
-              '${widget.task.deadline.hour.toString().padLeft(2, '0')}:${widget.task.deadline.minute.toString().padLeft(2, '0')}',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor),
-            ),
-            SizedBox(height: 8),
-            Wrap(
-              spacing: 4.0,
-              runSpacing: 4.0,
-              children: actionButtons,
-            ),
-          ],
+          ),
         ),
       ),
     );
