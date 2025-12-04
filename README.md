@@ -2,6 +2,8 @@
 
 自分用にカスタマイズできるタスク管理アプリ（Flutter / Android）
 
+[![Download APK](https://img.shields.io/badge/Download-APK-brightgreen?style=for-the-badge&logo=android)](https://github.com/high6430/task-manager-app/releases/latest/download/app-release.apk)
+
 ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
 ![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
 
@@ -67,6 +69,20 @@ IT専門学校の卒業制作として開発した、個人のワークスタイ
 - **タイムゾーン**: timezone
 - **対象プラットフォーム**: Android（iOS対応コード実装済み）
 - **開発環境**: Visual Studio Code
+
+## 📥 ダウンロード
+
+**最新版：** [v1.0.0](https://github.com/high6430/task-manager-app/releases/tag/v1.0.0)
+
+**インストール方法：**
+1. 上記の「Download APK」ボタンまたは[こちら](https://github.com/high6430/task-manager-app/releases/latest/download/app-release.apk)からAPKをダウンロード
+2. Android端末でAPKファイルを開く
+3. 「提供元不明のアプリ」を許可
+4. インストールをタップ
+
+**動作環境：**
+- Android 8.0以上
+- 推奨：Android 12以上
 
 ## 📂 プロジェクト構成
 
