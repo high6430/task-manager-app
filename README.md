@@ -1,4 +1,4 @@
-# タスク管理アプリ
+# PikaDo
 
 自分用にカスタマイズできるタスク管理アプリ（Flutter / Android）
 
@@ -129,20 +129,24 @@ dependencies:
   permission_handler: ^11.0.0
   timezone: ^0.9.0
 
-🚀 セットアップ方法
-必要な環境
-Flutter SDK 3.0以上
-Dart 2.17以上
-Android Studio / VS Code
-Android端末 または エミュレータ（Android 8.0以上推奨）
-インストール手順
-リポジトリをクローン
-Copygit clone https://github.com/high6430/pikado-app.git
-cd pikado-app
+## 🚀 セットアップ方法
+
+### 必要な環境
+- Flutter SDK 3.0以上
+- Dart 2.17以上
+- Android Studio / VS Code
+- Android端末 または エミュレータ（Android 8.0以上推奨）
+
+### インストール手順
+
+1. **リポジトリをクローン**
+```bash
+git clone https://github.com/high6430/task-manager-app.git
+cd task-manager-app
 依存関係をインストール
-Copyflutter pub get
+flutter pub get
 アプリを起動
-Copyflutter run
+flutter run
 
 📱 使い方
 タスクの追加
@@ -185,6 +189,11 @@ Copyflutter run
 右上の設定アイコンをタップ
 「アプリ全体の通知」をON/OFFで一括制御
 通知権限・アラーム権限の状態を確認
+UI/UX
+カスタムアイコン: 黄色背景に稲妻マークの「PikaDo」アイコン
+起動画面: 黄色い背景のスプラッシュスクリーン
+Android 11以下：画像表示
+Android 12以上：背景色のみ（円形マスク回避）
 
 🎯 開発目標
 達成済み
@@ -266,13 +275,14 @@ ProGuard設定とリリースビルド最適化
 
 📝 更新履歴
 2025/11/27
+アプリ名を「PikaDo」に変更
+カスタムアイコンと起動画面を実装
 通知機能実装完了（Android 12以上対応）
 通知セット機能実装
 通知アクション実装（完了・詳細表示）
 パフォーマンス最適化完了
 ログ最適化完了（デバッグモードのみ出力）
-タスクカードの色分けバグ修正
-2025/11/04
+タスクカードの色分けバグ修正2025/11/04
 ラベル機能実装完了（作成・付与・フィルタリング）
 2025/10/30
 タスク編集機能、削除確認、詳細フィールド追加
