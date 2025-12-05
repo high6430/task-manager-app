@@ -134,6 +134,26 @@ dependencies:
 
 ---
 
+## 📲 クイックアクセス
+
+### ダウンロード QR コード
+
+**v1.0.1 APK をスマートフォンで直接ダウンロード**
+
+![Download QR Code](assets/qrcodes/qr_download_v1.0.1.png)
+
+スマートフォンのカメラまたは QR コードスキャナーアプリでスキャンすると、ダウンロードページに直接移動します。
+
+### リポジトリ QR コード
+
+**GitHub リポジトリへのアクセス**
+
+![Repository QR Code](assets/qrcodes/qr_repository.png)
+
+スマートフォンのカメラまたは QR コードスキャナーアプリでスキャンすると、GitHub リポジトリページに直接移動します。
+
+---
+
 ## 🚀 トラブルシューティング
 
 ### 通知が届かない場合
