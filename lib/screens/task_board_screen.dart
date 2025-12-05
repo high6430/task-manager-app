@@ -209,42 +209,45 @@ class _TaskBoardScreenState extends State<TaskBoardScreen>
     );
   }
 
-  void _editTask(Task oldTask, String columnName) {
-    showDialog(
-      context: context,
-      builder: (context) => EditTaskDialog(
-        task: oldTask,
-        availableLabels: availableLabels,
-        onTaskUpdated: (newTask) async {
-          setState(() {
-            List<Task> targetList;
-            if (columnName == '未対応') {
-              targetList = todoTasks;
-            } else if (columnName == '進行中') {
-              targetList = doingTasks;
-            } else {
-              targetList = doneTasks;
-            }
+void _editTask(Task oldTask, String columnName) {
+  showDialog(
+    context: context,
+    builder: (dialogContext) => EditTaskDialog(  // ★ 修正: context → dialogContext
+      task: oldTask,
+      availableLabels: availableLabels,
+      onTaskUpdated: (newTask) async {
+        setState(() {
+          List<Task> targetList;
+          if (columnName == '未対応') {
+            targetList = todoTasks;
+          } else if (columnName == '進行中') {
+            targetList = doingTasks;
+          } else {
+            targetList = doneTasks;
+          }
 
-            final index = targetList.indexOf(oldTask);
-            if (index != -1) {
-              targetList[index] = newTask;
-            }
-            _updateFilteredTasks();
-          });
-          await _saveTasks();
+          final index = targetList.indexOf(oldTask);
+          if (index != -1) {
+            targetList[index] = newTask;
+          }
+          _updateFilteredTasks();
+        });
+        await _saveTasks();
 
-          // 通知を再スケジュール
-          final taskId = newTask.id;
-          await NotificationService.scheduleTaskNotifications(
-            newTask,
-            taskId,
-            columnName,
-          );
-        },
-      ),
-    );
-  }
+        final taskId = newTask.id;
+        await NotificationService.scheduleTaskNotifications(
+          newTask,
+          taskId,
+          columnName,
+        );
+        
+        // ★ 追加: ダイアログを閉じる
+        Navigator.of(dialogContext).pop(true);
+        Logger.success(' 編集ダイアログを閉じました');
+      },
+    ),
+  );
+}
 
   Widget _buildTaskList(List<Task> filteredTasks, String columnName) {
     if (filteredTasks.isEmpty) {
