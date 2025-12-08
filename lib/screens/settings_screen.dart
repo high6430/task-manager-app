@@ -173,7 +173,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'バージョン 1.0.0',
+                  'バージョン 1.0.1',
                   style: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
                 SizedBox(height: 4),
